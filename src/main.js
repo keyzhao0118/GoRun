@@ -3,11 +3,11 @@ import { COURSE, PLAYER_LANE_X, createWorld, laneCenterX } from './world.js';
 import { createRunner, createOpponent, OPPONENTS, PLAYER_PROFILE, pickRaceTime } from './character.js';
 import { createFX } from './fx.js';
 import { AudioKit } from './audio.js';
-import { clamp, damp, lerp, easeInOutCubic } from './utils.js';
+import { clamp, damp, lerp, easeInOutCubic, canvasTexture, roundRectPath, createStarGeometry } from './utils.js';
 
 const COUNTDOWN_DURATION = 2.4;
-const FINISH_DELAY = 1.28;
-const FINISH_PAST = 1.8;
+const FINISH_DELAY = 3.4;
+const PODIUM_Z = COURSE.finishZ - 4.8;
 const BEST_KEY = 'gorun.best.v1';
 const MAX_SPEED = 10.5;
 let fallDuration = 1.55;
@@ -40,6 +40,8 @@ const dom = {
   countdownNumber: $('#countdownNumber'),
   countdownSub: $('#countdownSub'),
   finishBanner: $('#finishBanner'),
+  podiumBanner: $('#podiumBanner'),
+  podiumNames: $('#podiumNames'),
   toast: $('#toast'),
   srLive: $('#srLive'),
   menu: $('#menu'),
@@ -102,6 +104,9 @@ const state = {
   opponents: [],
   finishBoard: [],
   playerPlace: 1,
+  podiumEntries: [],
+  playerOnPodium: false,
+  podiumBannerShown: false,
 };
 
 const cameraRig = {
@@ -115,6 +120,7 @@ const cameraRig = {
 
 let stage = null;
 let runner = null;
+let podium = null;
 let fx = null;
 let audio = null;
 let elapsed = 0;
@@ -213,6 +219,197 @@ function flashScreen(color = '255, 247, 236', peak = 0.55, duration = 480) {
     ],
     { duration, easing: 'ease-out' }
   );
+}
+
+
+function makePodiumNumberTexture(place) {
+  const medal = place === 1 ? '#ffd36e' : place === 2 ? '#dfe9ec' : '#e8b28e';
+  return canvasTexture(256, 256, (ctx, w, h) => {
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = '#fff8ed';
+    roundRectPath(ctx, 14, 14, w - 28, h - 28, 66);
+    ctx.fill();
+    ctx.lineWidth = 9;
+    ctx.strokeStyle = '#4a333d';
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(w / 2, h / 2 - 8, 78, 0, Math.PI * 2);
+    ctx.fillStyle = medal;
+    ctx.fill();
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = '#4a333d';
+    ctx.stroke();
+    ctx.fillStyle = '#4a333d';
+    ctx.font = '700 120px Fredoka, Arial, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(String(place), w / 2, h / 2 - 8);
+    ctx.fillStyle = '#8a5f61';
+    ctx.font = '600 22px Fredoka, Arial, sans-serif';
+    ctx.fillText('PLACE', w / 2, 224);
+  });
+}
+
+function createPodium() {
+  const group = new THREE.Group();
+  group.position.set(0, 0, PODIUM_Z);
+  group.visible = false;
+
+  const cream = new THREE.MeshStandardMaterial({ color: 0xfff4e5, roughness: 0.78 });
+  const ink = new THREE.MeshStandardMaterial({ color: 0x4a333d, roughness: 0.7 });
+  const gold = new THREE.MeshStandardMaterial({ color: 0xffd36e, roughness: 0.48, metalness: 0.06 });
+  const silver = new THREE.MeshStandardMaterial({ color: 0xdbe5e9, roughness: 0.52, metalness: 0.04 });
+  const bronze = new THREE.MeshStandardMaterial({ color: 0xe6b08c, roughness: 0.55, metalness: 0.04 });
+  const starMat = new THREE.MeshStandardMaterial({ color: 0xffd36e, roughness: 0.45, emissive: 0xd99a26, emissiveIntensity: 0.08 });
+
+  const base = new THREE.Mesh(new THREE.BoxGeometry(6.3, 0.12, 2.2), cream);
+  base.position.y = 0.06;
+  base.castShadow = true;
+  base.receiveShadow = true;
+  group.add(base);
+
+  const star = new THREE.Mesh(createStarGeometry(0.28, 0.115), starMat);
+  star.position.set(0, 0.17, -1.115);
+  star.rotation.y = Math.PI;
+  star.castShadow = true;
+  group.add(star);
+
+  const configs = [
+    { place: 1, x: 0, h: 0.82, w: 1.9, d: 1.55, cap: gold, numberSize: 0.56 },
+    { place: 2, x: 1.55, h: 0.5, w: 1.62, d: 1.42, cap: silver, numberSize: 0.47 },
+    { place: 3, x: -1.55, h: 0.32, w: 1.5, d: 1.38, cap: bronze, numberSize: 0.38 },
+  ];
+
+  const tiers = {};
+  for (const config of configs) {
+    const box = new THREE.Mesh(new THREE.BoxGeometry(config.w, config.h, config.d), cream);
+    box.position.set(config.x, 0.12 + config.h / 2, 0);
+    box.castShadow = true;
+    box.receiveShadow = true;
+    group.add(box);
+
+    const cap = new THREE.Mesh(new THREE.BoxGeometry(config.w + 0.035, 0.06, config.d + 0.035), config.cap);
+    cap.position.set(config.x, 0.12 + config.h + 0.03, 0);
+    cap.castShadow = true;
+    cap.receiveShadow = true;
+    group.add(cap);
+
+    const plane = new THREE.Mesh(
+      new THREE.PlaneGeometry(config.numberSize, config.numberSize),
+      new THREE.MeshBasicMaterial({ map: makePodiumNumberTexture(config.place), transparent: true, toneMapped: false })
+    );
+    plane.position.set(config.x, 0.12 + config.h * 0.52, -config.d / 2 - 0.012);
+    plane.rotation.y = Math.PI;
+    group.add(plane);
+
+    tiers[config.place] = {
+      x: config.x,
+      top: 0.12 + config.h + 0.06,
+      width: config.w,
+      depth: config.d,
+    };
+  }
+
+  return { group, tiers };
+}
+
+function showPodiumBanner() {
+  if (!dom.podiumBanner || !dom.podiumNames || !state.podiumEntries.length) return;
+  const entries = state.podiumEntries.slice(0, 3);
+  const displayOrder = [entries[1], entries[0], entries[2]].filter(Boolean);
+  dom.podiumNames.innerHTML = displayOrder
+    .map((entry) => {
+      const color = '#' + entry.profile.kit.top.toString(16).padStart(6, '0');
+      return (
+        '<span class="podium-chip' +
+        (entry.isPlayer ? ' is-player' : '') +
+        '" data-place="' +
+        entry.place +
+        '"><i>' +
+        entry.place +
+        '</i><span class="podium-dot" style="--dot:' +
+        color +
+        '"></span><b>' +
+        entry.name +
+        '</b></span>'
+      );
+    })
+    .join('');
+  dom.podiumBanner.classList.add('is-visible');
+  dom.podiumBanner.setAttribute('aria-hidden', 'false');
+  state.podiumBannerShown = true;
+}
+
+function hidePodiumBanner() {
+  if (!dom.podiumBanner) return;
+  dom.podiumBanner.classList.remove('is-visible');
+  dom.podiumBanner.setAttribute('aria-hidden', 'true');
+}
+
+function arrangePodium() {
+  if (!podium) return;
+  const top = state.finishBoard.slice(0, 3);
+  const scaleX = stage && stage.camera.aspect < 0.82 ? 0.74 : 1;
+  podium.group.scale.x = scaleX;
+  podium.group.visible = true;
+  state.podiumEntries = [];
+  state.playerOnPodium = false;
+
+  if (runner) runner.group.visible = false;
+  for (const npc of state.opponents) {
+    npc.onPodium = false;
+    npc.group.visible = false;
+  }
+
+  top.forEach((entry, index) => {
+    const place = index + 1;
+    const tier = podium.tiers[place];
+    if (!tier) return;
+    let controller = null;
+    let group = null;
+    let npc = null;
+    if (entry.isPlayer) {
+      controller = runner;
+      group = runner.group;
+      state.playerOnPodium = true;
+    } else {
+      npc = state.opponents.find((item) => item.profile.id === entry.profile.id) || null;
+      controller = npc ? npc.controller : null;
+      group = npc ? npc.group : null;
+      if (npc) npc.onPodium = true;
+    }
+    if (!controller || !group) return;
+
+    group.visible = true;
+    group.rotation.set(0, 0, 0);
+    group.position.set(tier.x * scaleX, tier.top, PODIUM_Z + 0.04);
+    controller.reset();
+    controller.update(0, elapsed, { mode: 'finished', speedNorm: 0 });
+    state.podiumEntries.push({
+      ...entry,
+      place,
+      controller,
+      group,
+      npc,
+    });
+  });
+
+  if (state.playerOnPodium && runner) {
+    playerPos.copy(runner.group.position);
+  } else {
+    playerPos.set(0, 0, PODIUM_Z);
+  }
+
+  if (fx) {
+    fx.burstConfetti(new THREE.Vector3(0, 4.4, PODIUM_Z));
+    fx.spawnSparkle(new THREE.Vector3(0, 5.0, PODIUM_Z), 18, 1.15);
+  }
+}
+
+function updatePodium(dt) {
+  for (const entry of state.podiumEntries) {
+    entry.controller.update(dt, elapsed, { mode: 'finished', speedNorm: 0 });
+  }
 }
 
 function showFinishBanner() {
@@ -325,6 +522,7 @@ function resetOpponents() {
     npc.finished = false;
     npc.finishT = 0;
     npc.speedNorm = 0;
+    npc.onPodium = false;
     npc.targetTime = pickRaceTime(npc.profile);
     npc.group.position.set(laneCenterX(npc.profile.lane), 0, COURSE.startZ);
     npc.group.visible = false;
@@ -347,6 +545,14 @@ function updateOpponents(dt, mode) {
   const now = state.phase === 'finished' ? state.finishTime + state.finishElapsed : state.raceTime;
 
   for (const npc of state.opponents) {
+    if (npc.onPodium) {
+      npc.controller.update(dt, elapsed, { mode: 'finished', speedNorm: 0 });
+      continue;
+    }
+    if (state.phase === 'finished') {
+      npc.group.visible = false;
+      continue;
+    }
     if (!isRace) {
       npc.group.visible = mode !== 'menu';
       npc.group.position.set(laneCenterX(npc.profile.lane), 0, COURSE.startZ);
@@ -371,11 +577,7 @@ function updateOpponents(dt, mode) {
     const post = npc.finished ? Math.min(1.8, Math.max(0, now - T) * 2.4) : 0;
     npc.group.position.x = laneCenterX(npc.profile.lane);
     npc.group.position.z = COURSE.startZ - npc.distance - post;
-    // A chase camera should not have the trailing pack filling the screen when the player leads.
-    npc.group.visible =
-      state.phase === 'finished'
-        ? true
-        : npc.group.position.z <= COURSE.startZ - state.distance + 1.2;
+    npc.group.visible = true;
     npc.controller.update(dt, elapsed, {
       mode: npc.finished ? 'finished' : 'running',
       speedNorm: npc.speedNorm,
@@ -449,6 +651,12 @@ function resetRace() {
   state.lastCombo = -1;
   state.finishBoard = [];
   state.playerPlace = 1;
+  state.podiumEntries = [];
+  state.playerOnPodium = false;
+  state.podiumBannerShown = false;
+  hidePodiumBanner();
+  if (podium) podium.group.visible = false;
+  if (runner) runner.group.visible = true;
   if (runner) {
     runner.reset();
     runner.group.position.set(PLAYER_LANE_X, 0, COURSE.startZ);
@@ -602,7 +810,9 @@ function updateRunning(dt) {
     }
   }
 
-  updateOpponents(dt, 'running');
+  if (state.phase === 'running') {
+    updateOpponents(dt, 'running');
+  }
 
   if (state.phase !== 'running') return;
 
@@ -723,10 +933,9 @@ function finishRace() {
   state.finishElapsed = 0;
   state.maxSpeed = Math.max(state.maxSpeed, 0);
   clearToast();
-  runner.group.position.set(PLAYER_LANE_X, 0, COURSE.finishZ - FINISH_PAST);
-  playerPos.copy(runner.group.position);
   fx.hideDizzy();
   buildFinishBoard();
+  arrangePodium();
   const hadBest = Boolean(state.best);
   state.newBest = !hadBest || state.finishTime < state.best;
   if (state.newBest) {
@@ -738,10 +947,7 @@ function finishRace() {
     audio.stopMusic(0.06);
     audio.finish();
   }
-  fx.burstConfetti(runner.group.position);
-  runner.group.updateMatrixWorld(true);
-  fx.spawnSparkle(runner.getHeadWorldPosition(tempVec).add(new THREE.Vector3(0, 0.35, 0)), 16, 1.05);
-  cameraRig.shake = 0.25;
+  cameraRig.shake = 0.3;
   setBodyMode('finished');
   hideCountdownOverlay();
   dom.body.classList.remove('go-flash');
@@ -758,10 +964,10 @@ function finishRace() {
 function updateFinished(dt) {
   state.finishElapsed += dt;
   if (!runner) return;
-  runner.group.position.set(PLAYER_LANE_X, 0, COURSE.finishZ - FINISH_PAST);
-  playerPos.copy(runner.group.position);
-  runner.update(dt, elapsed, { mode: 'finished', speed: 0, fallTime: 0 });
-  updateOpponents(dt, 'finished');
+  updatePodium(dt);
+  if (!state.podiumBannerShown && state.finishElapsed >= 1.45) {
+    showPodiumBanner();
+  }
   if (!state.resultsShown && state.finishElapsed >= FINISH_DELAY) {
     showResults();
   }
@@ -836,6 +1042,7 @@ function showResults() {
     dom.resultSummary.textContent = '第 ' + place + ' 名完赛。飞人们很快，但你的下一次会更快。';
   }
   renderRaceBoard();
+  hidePodiumBanner();
   updateBestLabel();
   showScreen(dom.results);
   announce(
@@ -958,16 +1165,16 @@ function updateCamera(dt) {
     } else {
       const t = easeInOutCubic(clamp((state.countdownTime - 1.6) / (COUNTDOWN_DURATION - 1.6), 0, 1));
       cameraRig.base.set(
-        player.x + lerp(0.82, 0.55, t),
-        lerp(1.42, 1.24, t) + Math.sin(elapsed * 5.5) * 0.004,
-        player.z + lerp(5.65, 4.9, t)
+        isPortrait ? 0.15 : 0.22,
+        lerp(2.55, 2.7, t) + Math.sin(elapsed * 5.5) * 0.004,
+        player.z + lerp(6.7, 6.2, t)
       );
       cameraRig.look.set(
-        player.x + 0.02,
-        lerp(1.18, 1.27, t) + (isShortLandscape ? 0.22 : 0),
-        player.z - lerp(4.7, 5.9, t)
+        0.05,
+        lerp(1.12, 1.1, t) + (isShortLandscape ? 0.15 : 0),
+        player.z - lerp(6.6, 6.2, t)
       );
-      cameraRig.fov = lerp(57, 59, t);
+      cameraRig.fov = lerp(60, 60, t);
     }
     cameraRig.shake = damp(cameraRig.shake, 0, 5, dt);
   } else if (state.phase === 'running') {
@@ -981,26 +1188,32 @@ function updateCamera(dt) {
     let lambda;
 
     if (state.isFalling) {
-      targetX = player.x + (isPortrait ? 0.55 : 0.9);
-      targetY = 0.98;
-      targetZ = player.z + (isPortrait ? 4.1 : 3.85);
-      lookX = player.x;
-      lookY = 0.49;
-      lookZ = player.z - 1.4;
-      targetFov = isPortrait ? 60 : 57;
+      targetX = isPortrait ? 0.1 : 0.18;
+      targetY = 2.05;
+      targetZ = player.z + (isPortrait ? 5.8 : 5.6);
+      lookX = 0.05;
+      lookY = 0.75;
+      lookZ = player.z - 2.0;
+      targetFov = isPortrait ? 63 : 60;
       lambda = 4.2;
     } else {
-      const lateral = isPortrait ? 0.32 : 0.48;
-      const sway = Math.sin(elapsed * 2.2) * 0.03 * speedNorm + state.cameraKick;
-      const bob = Math.sin(elapsed * 9.5) * 0.008 * speedNorm;
-      targetX = player.x + lateral + sway;
-      targetY = (isPortrait ? 1.28 : 1.24) + bob + speedNorm * 0.02;
-      targetZ = player.z + (isPortrait ? 5.5 : 4.9) + speedNorm * 0.25;
-      lookX = player.x + (isPortrait ? 0.03 : 0.0);
-      lookY = 1.27 + Math.sin(elapsed * 6.2) * 0.004 * speedNorm + (isShortLandscape ? 0.32 : 0);
-      lookZ = player.z - (isPortrait ? 5.1 : 5.9) - speedNorm * 0.4;
-      targetFov = (isPortrait ? 61 : 59) + speedNorm * (isPortrait ? 9 : 10) + (isShortLandscape ? 2 : 0);
-      lambda = 6.5;
+      let trailingGap = 0;
+      for (const npc of state.opponents) {
+        if (!npc.group.visible) continue;
+        const gap = npc.group.position.z - player.z;
+        if (gap > trailingGap) trailingGap = gap;
+      }
+      const extra = clamp(trailingGap, 0, 6.5);
+      const sway = Math.sin(elapsed * 2.2) * 0.035 * speedNorm + state.cameraKick;
+      const bob = Math.sin(elapsed * 9.5) * 0.01 * speedNorm;
+      targetX = (isPortrait ? 0.12 : 0.2) + sway;
+      targetY = (isPortrait ? 2.9 : 2.7) + bob + speedNorm * 0.1 + extra * 0.035;
+      targetZ = player.z + (isPortrait ? 7.2 : 6.2) + extra + speedNorm * 0.18;
+      lookX = 0.05;
+      lookY = (isPortrait ? 1.05 : 1.1) + (isShortLandscape ? 0.15 : 0);
+      lookZ = player.z - (isPortrait ? 7.2 : 6.2) - extra * 0.15;
+      targetFov = (isPortrait ? 64 : 60) + speedNorm * (isPortrait ? 7 : 8) + (isShortLandscape ? 2 : 0);
+      lambda = 6.2;
     }
 
     cameraRig.base.x = damp(cameraRig.base.x, targetX, lambda, dt);
@@ -1012,17 +1225,16 @@ function updateCamera(dt) {
     cameraRig.fov = damp(cameraRig.fov, targetFov, 3.2, dt);
     cameraRig.shake = damp(cameraRig.shake, 0, 4.7, dt);
   } else if (state.phase === 'finished') {
-    const t = easeInOutCubic(clamp(state.finishElapsed / 1.25, 0, 1));
-    const startAngle = Math.atan2(isPortrait ? 0.55 : 1.0, isPortrait ? 5.5 : 4.9);
-    const finishAngle = isPortrait ? 2.72 : 2.78;
-    const angle = lerp(startAngle, finishAngle, t) + Math.sin(state.finishElapsed * 0.7) * 0.014 * t;
-    const radius = lerp(isPortrait ? 5.5 : 4.9, isPortrait ? 5.35 : 4.65, t);
-    const y = lerp(isPortrait ? 1.3 : 1.28, isPortrait ? 1.62 : 1.57, t);
-    cameraRig.base.set(player.x + Math.sin(angle) * radius, y, player.z + Math.cos(angle) * radius);
-    tempVecA.set(player.x + (isPortrait ? 0.06 : 0.02), 1.27, player.z - (isPortrait ? 5.1 : 5.9));
-    tempVecB.set(player.x + (isPortrait ? 0.0 : -0.45), 1.24, player.z + 0.1);
-    cameraRig.look.lerpVectors(tempVecA, tempVecB, t);
-    cameraRig.fov = lerp(isPortrait ? 61 : 59, isPortrait ? 53 : 50, t);
+    const t = easeInOutCubic(clamp(state.finishElapsed / 2.8, 0, 1));
+    const podiumZ = podium ? podium.group.position.z : PODIUM_Z;
+    const orbit = Math.sin(state.finishElapsed * 0.32) * 0.05;
+    cameraRig.base.set(
+      lerp(isPortrait ? 0.9 : 1.45, isPortrait ? 0.55 : 0.9, t) + orbit,
+      lerp(isPortrait ? 2.9 : 2.65, isPortrait ? 3.15 : 2.95, t),
+      podiumZ - lerp(isPortrait ? 8.7 : 7.3, isPortrait ? 9.0 : 7.55, t)
+    );
+    cameraRig.look.set(0.0, isPortrait ? 1.1 : 1.3, podiumZ + 0.18);
+    cameraRig.fov = isPortrait ? 58 : 50;
     cameraRig.shake = damp(cameraRig.shake, 0, 3.5, dt);
   } else {
     cameraRig.shake = damp(cameraRig.shake, 0, 4, dt);
@@ -1370,6 +1582,8 @@ async function boot() {
     }
     reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     stage = createWorld(dom.stage);
+    podium = createPodium();
+    stage.scene.add(podium.group);
     runner = createRunner();
     fallDuration = runner.fallDuration || fallDuration;
     runner.group.position.set(PLAYER_LANE_X, 0, COURSE.startZ);

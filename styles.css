@@ -3651,3 +3651,178 @@ noscript .fatal {
     transform: translate3d(104px, 30px, 0);
   }
 }
+
+
+/* ------------------------------------------------------------------
+   Podium ceremony
+   ------------------------------------------------------------------ */
+
+.podium-banner {
+  position: fixed;
+  top: max(82px, calc(66px + env(safe-area-inset-top)));
+  left: 50%;
+  z-index: 41;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  width: min(600px, calc(100vw - 28px));
+  padding: 8px 14px 10px;
+  border: 2px solid var(--ink);
+  border-radius: 22px;
+  background: rgba(255, 249, 240, 0.92);
+  box-shadow: 0 5px 0 rgba(70, 50, 60, 0.2), 0 18px 36px rgba(45, 25, 33, 0.16);
+  -webkit-backdrop-filter: blur(16px) saturate(1.08);
+  backdrop-filter: blur(16px) saturate(1.08);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: translate(-50%, -8px) scale(0.97);
+  transition: opacity 0.35s ease, transform 0.45s var(--ease-out), visibility 0.35s ease;
+}
+
+.podium-banner.is-visible {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0) scale(1);
+}
+
+.podium-kicker {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  line-height: 1;
+}
+
+.podium-title {
+  margin: 0;
+  color: var(--ink);
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+}
+
+.podium-names {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin-top: 1px;
+}
+
+.podium-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 24px;
+  padding: 3px 8px;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  background: var(--cream);
+  color: var(--ink);
+  font-size: 9px;
+  line-height: 1;
+  box-shadow: 0 2px 0 rgba(70, 50, 60, 0.14);
+}
+
+.podium-chip i {
+  display: grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: rgba(70, 50, 60, 0.1);
+  font-size: 8px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.podium-chip b {
+  max-width: 86px;
+  overflow: hidden;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.podium-dot {
+  width: 6px;
+  height: 6px;
+  flex: none;
+  border: 1px solid rgba(70, 50, 60, 0.4);
+  border-radius: 50%;
+  background: var(--dot, var(--coral));
+}
+
+.podium-chip[data-place='1'] {
+  background: var(--sun);
+  transform: translateY(-3px);
+}
+
+.podium-chip[data-place='2'] {
+  background: #dfe9ec;
+}
+
+.podium-chip[data-place='3'] {
+  background: #e9b28f;
+}
+
+.podium-chip.is-player {
+  box-shadow: 0 0 0 2px var(--mint-deep), 0 2px 0 rgba(70, 50, 60, 0.14);
+}
+
+@media (max-width: 680px) {
+  .podium-banner {
+    top: max(68px, calc(59px + env(safe-area-inset-top)));
+    width: min(420px, calc(100vw - 18px));
+    padding: 7px 10px 8px;
+    border-radius: 18px;
+  }
+
+  .podium-title {
+    font-size: 17px;
+  }
+
+  .podium-kicker {
+    font-size: 7px;
+  }
+
+  .podium-chip {
+    min-height: 22px;
+    padding: 2px 7px;
+    font-size: 8px;
+  }
+
+  .podium-chip b {
+    max-width: 66px;
+  }
+}
+
+@media (max-height: 580px) and (orientation: landscape) {
+  .podium-banner {
+    top: 56px;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    width: min(660px, calc(100vw - 120px));
+    padding: 4px 10px;
+    border-radius: 15px;
+  }
+
+  .podium-kicker {
+    display: none;
+  }
+
+  .podium-title {
+    font-size: 14px;
+  }
+
+  .podium-chip {
+    min-height: 20px;
+    font-size: 8px;
+  }
+}
