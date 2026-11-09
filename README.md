@@ -1,72 +1,90 @@
 <div align="center">
 
-<img src="./assets/og-cover.png" alt="GoRun — 左右交替的可爱 3D 百米跑" width="760" />
+<img src="./assets/og-cover.png" alt="GoRun — 和百米飞人跑一场可爱的一百米" width="760" />
 
 # GoRun
 
-**左右交替，跑出你的可爱一百米。**
+**左右交替，和百米飞人们跑一场可爱的一百米。**
 
-[**在线试玩 GoRun →**](https://keyzhao0118.github.io/GoRun/)
-
-一个可以真的跑起来的 3D 小游戏：交替按 <kbd>←</kbd> <kbd>→</kbd>，节奏越快，小兔越快；
-但要是不小心连按同一个方向——咕咚，摔个大马趴。
-
-[玩法](#玩法) · [本地运行](#本地运行) · [部署到-github-pages](#部署到-github-pages) · [技术细节](#技术细节)
+[**在线试玩 →**](https://keyzhao0118.github.io/GoRun/) · [GitHub 仓库](https://github.com/keyzhao0118/GoRun)
 
 </div>
 
 ---
 
-## 这游戏是什么？
+## 这游戏是什么
 
-GoRun 是一个固定 100 米的 3D 跑步小游戏。没有关卡，没有氪金，只有一条可爱的粉色跑道、
-一个努力倒腾小短腿的兔子，以及你的手速。
+GoRun 是一个固定 **100 米** 的 3D 短跑小游戏。你是粉色跑道上的卡通跑者，身边是博尔特、鲍威尔、加特林、盖伊、布雷克、苏炳添和科尔曼——**八个道次，七位飞人对手**。
 
-- 在低机位 3D 体育场里，从起跑线一路冲过 100 米终点
-- 左右键交替迈步，按键节奏会直接变成速度
-- 连按同一个方向会绊倒，需要等小兔晕乎乎地爬起来
-- 有计时、最高速度、连击、评级、本地最佳纪录和分享按钮
-- 所有画面、角色、音效和纹理均由代码实时生成，不依赖外部素材
+- 左右交替按键，踩准节奏就会越跑越快
+- 连续按同一个方向两次会绊倒，要等 GoRun 爬起来
+- 每位对手的完赛成绩都从他们**真实的历史 100 米成绩**中随机抽取
+- 比赛结束后按名次展示完整成绩榜，看看你排第几
+- 固定 100 米、8 条道次、低机位 3D 体育场、彩带和观众
 
-![](./assets/screenshot-run.jpg)
+![八位选手在起跑线列队](assets/screenshot-lineup.jpg)
+
+## 七位飞人对手
+
+你在第 4 道。其余七条跑道上，分别是：
+
+| 道次 | 选手 | 100m PB | 卡通造型与标志动作 |
+| :--: | :-- | :--: | :-- |
+| 1 | 加特林 | 9.74 | 美国红 / 藏蓝配色，结实身材，双拳展示 |
+| 2 | 布雷克 | 9.69 | 牙买加绿色，宽肩，“野兽”爪式庆祝 |
+| 3 | 鲍威尔 | 9.72 | 牙买加绿 / 金，山羊胡，张臂放松 |
+| **4** | **你** | **—** | **薄荷色上衣、珊瑚短裤、薄荷发带** |
+| 5 | 博尔特 | 9.58 | 高挑身形，黄 / 绿牙买加色，招牌闪电姿势 |
+| 6 | 盖伊 | 9.69 | 白色 / 藏蓝美国配色，粉色发带 |
+| 7 | 苏炳添 | 9.83 | 红 / 黄中国配色，终点双手指天 |
+| 8 | 科尔曼 | 9.76 | 蓝 / 白美国配色，白色发带，摆臂庆祝 |
+
+> 博尔特、盖伊、布雷克、鲍威尔、加特林——常说的“百米五虎”全部在列；苏炳添和科尔曼作为额外对手加入。
+>
+> 这些角色是以运动员的公开形象、国家队配色和标志性庆祝动作为灵感做的**卡通化风格演绎**，不是官方授权形象，也没有使用任何真实运动员的肖像、队徽或官方装备素材。
+
+每场比赛开始时，游戏会从每位选手的历史成绩池里随机抽一个成绩。例如博尔特可能跑出 9.58、9.63、9.69、9.72……苏炳添可能跑出 9.83、9.90、9.91……所以每一场的对手状态和最终排名都不一样。
+
+开场倒计时会先给一个正面列队镜头，展示所有选手的造型和标志动作；随后切到起跑线后方，开始比赛。
 
 ## 玩法
 
 | 操作 | 说明 |
 | --- | --- |
 | <kbd>←</kbd> / <kbd>→</kbd> 或 <kbd>A</kbd> / <kbd>D</kbd> | 左右交替迈步；**按得越快，速度越快** |
-| 连续按同一个方向 | 绊倒！等 1.5 秒左右爬起来，期间不能加速 |
+| 连续按同一个方向 | 绊倒！等 GoRun 重新站起来，期间计时继续 |
 | <kbd>空格</kbd> / <kbd>Enter</kbd> | 开始奔跑 / 在结算页再来一次 |
 | <kbd>P</kbd> / <kbd>Esc</kbd> | 暂停 / 继续 |
 | <kbd>M</kbd> | 静音 / 打开声音 |
 | <kbd>R</kbd> | 结算页再来一次 |
 
-手机和平板可以直接点按屏幕底部的两个大按键，左右交替即可。
+手机和平板可以直接点击屏幕底部的两个大按键，左右交替即可。
 
 > 小提示：不要一上来就疯狂乱敲。先找到稳定的左右节奏，再一点点加速，会比手忙脚乱更快。
 
 ## 特性
 
-- **低机位 3D 体育场**：粉红跑道、白色赛道线、大号地贴、阶梯看台、彩色观众、终点大屏和彩带。
-- **程序化可爱角色**：奶油色小兔、薄荷色跑步服、珊瑚色围巾、会飘起来的围巾和会抖动的耳朵。
-- **实时 3D 动画**：跑步周期、起步、绊倒、爬起、终点庆祝各有自己的动作。
-- **速度反馈**：视野随速度变宽、镜头轻震、尾部速度线和脚步尘土会让 44 km/h 跑出感觉。
-- **可爱的声音**：Web Audio 合成的脚步音、倒计时、摔倒音、完赛小号角和轻快背景音乐，全部可一键静音。
-- **完整一局体验**：倒计时、计时、进度、速度、连击、暂停、结算、评级、本地最佳成绩、复制成绩。
-- **移动端适配**：底部大按键、安全区、竖屏菜单、横屏结算都做了单独布局。
-- **零构建**：原生 HTML/CSS/ES Modules，Three.js 与字体都已经本地化，直接静态托管即可。
+- **卡通 3D 飞人大战**：8 条道次、7 位风格化对手，每位都有独立的身高、体型、肤色、发型、发带、胡须、国家队配色和跑步风格。
+- **标志性动作**：闪电姿势、张臂、双拳、野兽爪、指天等，会出现在开场列队和终点庆祝里。
+- **真实成绩池**：对手的完赛时间从公开历史成绩中随机抽取，结果榜会同时显示每个人的 PB 和本场成绩。
+- **完整比赛流程**：八人列队亮相、3-2-1 倒计时、计时、名次、进度、速度、连击、暂停、结算、分享和本地最佳纪录。
+- **可爱的速度感**：低机位追尾镜头、FOV 随速度变宽、脚步尘土、冲刺速度线和终点彩带。
+- **原创程序化资产**：角色、跑道、看台、观众、地贴、广告牌、彩带、UI 图形和音效均由代码生成，没有下载模型、贴图或官方素材。
+- **移动端适配**：底部大按键、竖屏菜单、横屏双栏结算、安全区适配。
+
+![](./assets/screenshot-run.jpg)
 
 ## 本地运行
 
-需要 Node.js 18+（仅用于起一个本地静态服务器，游戏本身没有构建步骤）：
+需要 Node.js 18+（仅用于启动静态服务器，游戏本身没有构建步骤）：
 
 ```bash
 npm start
 ```
 
-然后打开终端里提示的地址（默认是 <http://127.0.0.1:4173>）。
+打开 <http://127.0.0.1:4173>。
 
-也可以使用任意静态文件服务器，例如：
+也可以使用任意静态文件服务器：
 
 ```bash
 npx serve .
@@ -78,44 +96,28 @@ python -m http.server 4173
 
 ## 部署到 GitHub Pages
 
-这是一个纯静态站点，有两种部署方式。仓库里已经带好了 **GitHub Actions** 工作流。
+项目已经部署在 GitHub Pages 上，仓库里包含开箱即用的 GitHub Actions 工作流：
 
-### 方式一：GitHub Actions（推荐）
+- 工作流：[.github/workflows/deploy.yml](./.github/workflows/deploy.yml)
+- 当前线上地址：<https://keyzhao0118.github.io/GoRun/>
+- 推送 `main` 分支后会自动重新部署。
 
-1. 把仓库推送到 GitHub。
-2. 打开仓库的 **Settings → Pages**。
-3. 在 **Build and deployment → Source** 中选择 **GitHub Actions**。
-4. 推送到 `main` 分支（或手动触发一次 **Deploy GoRun to GitHub Pages** 工作流）。
-5. 等 Actions 跑完，页面地址会显示在该 workflow 的部署步骤里，通常形如：
-   `https://<你的用户名>.github.io/GoRun/`
+如果要在自己的账号重新部署：
 
-工作流文件：[.github/workflows/deploy.yml](./.github/workflows/deploy.yml)。它只会把
-`index.html`、样式、`src/`、`vendor/` 和 `assets/` 复制到 Pages 产物里，不会上传开发用的临时文件。
+1. Fork 或导入仓库。
+2. 打开 **Settings → Pages**，把 **Build and deployment → Source** 设为 **GitHub Actions**。
+3. 推送到 `main`，或手动触发 **Deploy GoRun to GitHub Pages** 工作流。
+4. 等 Actions 完成，页面会出现在 `https://<你的用户名>.github.io/GoRun/`。
 
-### 方式二：从分支直接部署
+也可以选择 **Deploy from a branch** → `main` → `/(root)`；仓库根目录已有 `.nojekyll`。
 
-如果不想用 Actions：
-
-1. **Settings → Pages → Source** 选择 **Deploy from a branch**。
-2. 选择 `main` 分支和 `/(root)` 目录。
-3. 保存即可。仓库根目录带有 `.nojekyll`，不会经过 Jekyll 处理。
-
-### 分享图
-
-项目的 Open Graph / Twitter 分享图已经指向当前 Pages 地址：
-
-```html
-<meta property="og:image" content="https://keyzhao0118.github.io/GoRun/assets/og-cover.png" />
-```
-
-如果你 fork 到自己的账号或修改了仓库名，记得同步修改 `index.html` 里的
-`og:url`、`og:image`、`twitter:image` 和 `canonical`。
+如果 fork 后修改了仓库名，记得同步修改 `index.html` 里的 `og:url`、`og:image`、`twitter:image` 和 `canonical` 绝对地址。
 
 ## 截图
 
 <div align="center">
   <img src="./assets/screenshot-menu.jpg" alt="GoRun 标题界面" width="48%" />
-  <img src="./assets/screenshot-results.jpg" alt="GoRun 结算界面" width="48%" />
+  <img src="./assets/screenshot-results.jpg" alt="GoRun 名次结算界面" width="48%" />
 </div>
 
 <div align="center">
@@ -126,13 +128,13 @@ python -m http.server 4173
 
 ```
 .
-├── index.html               # 页面、UI 结构、Import Map
-├── styles.css               # 完整界面样式与响应式布局
+├── index.html               # 页面、UI、Import Map
+├── styles.css               # 界面样式与响应式布局
 ├── favicon.svg
 ├── src/
-│   ├── main.js              # 状态机、输入、相机、HUD、计时与存档
-│   ├── world.js             # Three.js 场景：体育场、跑道、看台、天空、终点
-│   ├── character.js         # 小兔模型 + 跑步/摔倒/庆祝的程序化动画
+│   ├── main.js              # 状态机、输入、相机、比赛逻辑、HUD 与存档
+│   ├── world.js             # 8 道 3D 体育场、跑道、看台、天空、终点
+│   ├── character.js         # 卡通跑者与 7 位对手的建模、表情、跑步/摔倒/庆祝
 │   ├── fx.js                # 尘土、星星、彩带
 │   ├── audio.js             # Web Audio 合成音效与 BGM
 │   └── utils.js             # 数学与 Canvas 纹理工具
@@ -140,8 +142,9 @@ python -m http.server 4173
 │   ├── three.module.js      # Three.js r170
 │   └── LICENSE-three.txt
 ├── assets/
-│   ├── fonts/               # Fredoka（含 OFL 许可证）
+│   ├── fonts/               # Fredoka（含 SIL OFL 许可证）
 │   ├── og-cover.png
+│   ├── apple-touch-icon.png
 │   └── screenshot-*.jpg
 ├── scripts/serve.mjs        # 零依赖本地静态服务器
 └── .github/workflows/deploy.yml
@@ -149,20 +152,24 @@ python -m http.server 4173
 
 ## 技术细节
 
-- **无构建**：浏览器原生 ES Modules + Import Map。Three.js 和 Fredoka 字体都已放在仓库内，访问时不需要第三方 CDN。
-- **程序化资产**：跑道、地贴、观众、彩带、标语、UI 图形均由 Canvas 2D 或 Three.js 几何体生成；没有下载任何 3D 模型或贴图。
-- **性能**：观众和云朵使用 `InstancedMesh`；阴影贴图在触摸设备上自动降低；桌面和移动端分别锁定渲染像素比。
+- **无构建**：原生 HTML / CSS / ES Modules + Import Map。Three.js 和 Fredoka 字体都已放在仓库里，访问时不需要第三方 CDN。
+- **程序化 3D 人物**：统一的人体骨架加上每位选手的体型、服装、发型、胡须和发带参数；跑步、起步、庆祝、表情都由代码驱动。
+- **真实成绩池**：`character.js` 里保存每位对手的公开历史 100 米成绩，`pickRaceTime()` 在每场比赛开始时抽样。对手的赛道位置由目标完赛时间反推，因此视觉冲线和成绩一致。
+- **8 道场景**：跑道、栏板、计时牌、终点拱门、看台和起跑器都根据道宽自动布局。
+- **名次系统**：玩家完赛后把本场时间与七位 NPC 的目标成绩排序，生成完整成绩榜和名次。
 - **存档**：最佳成绩和静音状态保存在浏览器 `localStorage`，不上传服务器。
-- **兼容性**：建议使用最新版 Chrome、Edge、Safari 或 Firefox。需要支持 WebGL2、ES Modules 和 Import Maps。
+- **性能**：观众和云朵使用 `InstancedMesh`；桌面和移动端分别限制渲染像素比；对手使用轻量化的程序模型和 blob 阴影。
 
 ## Credits
 
 - [Three.js](https://threejs.org/) r170 — MIT License，许可证见 [vendor/LICENSE-three.txt](./vendor/LICENSE-three.txt)。
 - [Fredoka](https://fonts.google.com/specimen/Fredoka) — SIL Open Font License 1.1，许可证见 [assets/fonts/OFL.txt](./assets/fonts/OFL.txt)。
-- 玩法与镜头语言受到 Luke Doukakis 的 *Speed Stars* 启发；本项目的代码、角色、场景与音效均为原创实现，没有使用该游戏的素材。
+- 玩法和镜头语言受到 Luke Doukakis 的 *Speed Stars* 启发。
+- 七位运动员的卡通形象是基于公开资料、国家队配色和标志性动作的粉丝向风格化演绎，与运动员本人无隶属或授权关系；没有使用任何真实运动员的肖像素材、队徽或官方装备素材。比赛成绩取自公开历史成绩用于游戏随机池，不代表官方赛事结果。
+- 本项目的代码、角色、场景、UI 与音效均为原创实现。
 
 <div align="center">
 
-**Made with a small pair of running shoes and Three.js.**
+**Made with a pair of running shoes, eight lanes, and Three.js.**
 
 </div>

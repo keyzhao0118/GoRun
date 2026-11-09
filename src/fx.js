@@ -63,7 +63,7 @@ export function createFX(scene) {
     });
   }
 
-  // Three dizzy stars orbiting the bunny's head after a tumble.
+  // Three dizzy stars orbiting the runner's head after a tumble.
   starAnchor.visible = false;
   scene.add(starAnchor);
   for (let i = 0; i < 3; i += 1) {

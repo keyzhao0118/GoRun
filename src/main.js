@@ -1,6 +1,6 @@
 import * as THREE from 'three';
-import { COURSE, createWorld } from './world.js';
-import { createRunner } from './character.js';
+import { COURSE, PLAYER_LANE_X, createWorld, laneCenterX } from './world.js';
+import { createRunner, createOpponent, OPPONENTS, PLAYER_PROFILE, pickRaceTime } from './character.js';
 import { createFX } from './fx.js';
 import { AudioKit } from './audio.js';
 import { clamp, damp, lerp, easeInOutCubic } from './utils.js';
@@ -9,7 +9,7 @@ const COUNTDOWN_DURATION = 2.4;
 const FINISH_DELAY = 1.28;
 const FINISH_PAST = 1.8;
 const BEST_KEY = 'gorun.best.v1';
-const MAX_SPEED = 12.2;
+const MAX_SPEED = 10.5;
 let fallDuration = 1.55;
 
 const $ = (selector) => document.querySelector(selector);
@@ -28,6 +28,7 @@ const dom = {
   progressFill: $('#progressFill'),
   progressRunner: $('#progressRunner'),
   speedFill: $('#speedFill'),
+  hudPlace: $('#hudPlace'),
   stepDock: $('#stepDock'),
   comboBadge: $('#comboBadge'),
   comboValue: $('#comboValue'),
@@ -52,9 +53,10 @@ const dom = {
   fallResult: $('#fallResult'),
   comboResult: $('#comboResult'),
   maxSpeedResult: $('#maxSpeedResult'),
-  gradeBadge: $('#gradeBadge'),
-  gradeLetter: $('#gradeLetter'),
-  gradeLabel: $('#gradeLabel'),
+  placeBadge: $('#placeBadge'),
+  placeNumber: $('#placeNumber'),
+  placeLabel: $('#placeLabel'),
+  raceBoard: $('#raceBoard'),
   resultsTitle: $('#resultsTitle'),
   resultSummary: $('#resultSummary'),
   restartBtn: $('#restartBtn'),
@@ -97,6 +99,9 @@ const state = {
   helpOpen: false,
   lastHudTime: '',
   lastCombo: -1,
+  opponents: [],
+  finishBoard: [],
+  playerPlace: 1,
 };
 
 const cameraRig = {
@@ -248,6 +253,7 @@ function countdownBounce(value) {
 function showCountdownOverlay() {
   if (!dom.countdown) return;
   dom.countdown.classList.remove('is-go');
+  dom.countdown.classList.remove('is-intro');
   dom.countdown.classList.add('is-open');
   dom.countdown.setAttribute('aria-hidden', 'false');
   dom.countdownKicker.textContent = 'READY?';
@@ -258,6 +264,7 @@ function hideCountdownOverlay() {
   if (!dom.countdown) return;
   dom.countdown.classList.remove('is-open');
   dom.countdown.classList.remove('is-go');
+  dom.countdown.classList.remove('is-intro');
   dom.countdown.setAttribute('aria-hidden', 'true');
 }
 
@@ -294,7 +301,7 @@ function refreshKeys() {
   else if (state.phase === 'menu') hint = '左右交替按，越快越快！';
   else if (state.phase === 'finished') hint = '冲过终点啦！';
   else if (state.phase === 'paused') hint = '比赛暂停中';
-  else if (state.isFalling) hint = '哎呀！等它爬起来…';
+  else if (state.isFalling) hint = '哎呀！等 GoRun 爬起来…';
   else if (!state.lastDir) hint = '按 ← 或 → 起跑！';
   else hint = state.lastDir === 'left' ? '下一拍：→ 右' : '下一拍：← 左';
   dom.stepHint.textContent = hint;
@@ -310,6 +317,107 @@ function refreshCombo(animate = false) {
     void dom.comboBadge.offsetWidth;
     dom.comboBadge.classList.add('is-pop');
   }
+}
+
+function resetOpponents() {
+  for (const npc of state.opponents) {
+    npc.distance = 0;
+    npc.finished = false;
+    npc.finishT = 0;
+    npc.speedNorm = 0;
+    npc.targetTime = pickRaceTime(npc.profile);
+    npc.group.position.set(laneCenterX(npc.profile.lane), 0, COURSE.startZ);
+    npc.group.visible = false;
+    npc.controller.reset();
+    npc.controller.update(0, 0, { mode: 'menu', speedNorm: 0 });
+  }
+}
+
+function npcRaceProgress(time, targetTime, accel) {
+  const T = Math.max(0.1, targetTime);
+  const tau = Math.min(time, T);
+  const total = T - (1 - Math.exp(-accel * T)) / accel;
+  const current = tau - (1 - Math.exp(-accel * tau)) / accel;
+  return { progress: clamp(current / total, 0, 1), cur: current, total };
+}
+
+function updateOpponents(dt, mode) {
+  if (!state.opponents.length) return;
+  const isRace = mode === 'running' || mode === 'finished';
+  const now = state.phase === 'finished' ? state.finishTime + state.finishElapsed : state.raceTime;
+
+  for (const npc of state.opponents) {
+    if (!isRace) {
+      npc.group.visible = mode !== 'menu';
+      npc.group.position.set(laneCenterX(npc.profile.lane), 0, COURSE.startZ);
+      npc.controller.update(dt, elapsed, { mode, speedNorm: 0 });
+      continue;
+    }
+
+    npc.group.visible = true;
+    const T = npc.targetTime;
+    const accel = npc.profile.accel || 2.4;
+    const { progress } = npcRaceProgress(now, T, accel);
+    const speed = now < T ? (1 - Math.exp(-accel * now)) * 100 / npcRaceProgress(T, T, accel).total : 0;
+    npc.speedNorm = clamp(speed / 10.5, 0, 1);
+    npc.distance = progress * 100;
+
+    if (!npc.finished && now >= T) {
+      npc.finished = true;
+      npc.finishT = 0;
+    }
+    if (npc.finished) npc.finishT += dt;
+
+    const post = npc.finished ? Math.min(1.8, Math.max(0, now - T) * 2.4) : 0;
+    npc.group.position.x = laneCenterX(npc.profile.lane);
+    npc.group.position.z = COURSE.startZ - npc.distance - post;
+    // A chase camera should not have the trailing pack filling the screen when the player leads.
+    npc.group.visible =
+      state.phase === 'finished'
+        ? true
+        : npc.group.position.z <= COURSE.startZ - state.distance + 1.2;
+    npc.controller.update(dt, elapsed, {
+      mode: npc.finished ? 'finished' : 'running',
+      speedNorm: npc.speedNorm,
+    });
+  }
+}
+
+function refreshPlace() {
+  if (!dom.hudPlace) return;
+  let place = state.playerPlace;
+  if (state.phase !== 'finished') {
+    place = 1;
+    for (const npc of state.opponents) {
+      if (npc.distance > state.distance + 0.02) place += 1;
+    }
+    state.playerPlace = place;
+  }
+  dom.hudPlace.textContent = String(state.playerPlace);
+}
+
+function buildFinishBoard() {
+  const entries = [
+    {
+      name: '你',
+      shortName: 'YOU',
+      time: state.finishTime,
+      lane: COURSE.playerLane,
+      isPlayer: true,
+      profile: PLAYER_PROFILE,
+    },
+    ...state.opponents.map((npc) => ({
+      name: npc.profile.label,
+      shortName: npc.profile.name,
+      time: npc.targetTime,
+      lane: npc.profile.lane,
+      isPlayer: false,
+      profile: npc.profile,
+    })),
+  ];
+  entries.sort((a, b) => a.time - b.time || (a.isPlayer ? -1 : b.isPlayer ? 1 : 0));
+  state.finishBoard = entries;
+  state.playerPlace = entries.findIndex((entry) => entry.isPlayer) + 1;
 }
 
 function resetRace() {
@@ -339,10 +447,13 @@ function resetRace() {
   state.newBest = false;
   state.lastHudTime = '';
   state.lastCombo = -1;
+  state.finishBoard = [];
+  state.playerPlace = 1;
   if (runner) {
     runner.reset();
-    runner.group.position.set(0, 0, COURSE.startZ);
+    runner.group.position.set(PLAYER_LANE_X, 0, COURSE.startZ);
   }
+  resetOpponents();
   if (fx) fx.reset();
   updateHud();
   refreshKeys();
@@ -365,11 +476,22 @@ async function startGame() {
   }
   if (state.helpOpen) closeHelp();
   resetRace();
-  runner.group.position.set(0, 0, COURSE.startZ);
+  runner.group.position.set(PLAYER_LANE_X, 0, COURSE.startZ);
+  for (const npc of state.opponents) {
+    npc.targetTime = pickRaceTime(npc.profile);
+    npc.distance = 0;
+    npc.finished = false;
+    npc.finishT = 0;
+    npc.speedNorm = 0;
+    npc.group.position.set(laneCenterX(npc.profile.lane), 0, COURSE.startZ);
+    npc.group.visible = true;
+    npc.controller.reset();
+  }
   flashScreen('255, 247, 236', fromMenu ? 0.24 : 0.5, fromMenu ? 300 : 440);
   setBodyMode('countdown');
   dom.body.classList.remove('is-rushing');
   showCountdownOverlay();
+  dom.countdown.classList.add('is-intro');
   state.countdownTime = 0;
   state.countdownTick = 0;
   countdownDigit('3');
@@ -400,6 +522,7 @@ function beginRace() {
   state.targetSpeed = 0;
   state.goOverlayTime = 0.52;
   state.countdownTime = COUNTDOWN_DURATION;
+  dom.countdown.classList.remove('is-intro');
   dom.body.classList.add('go-flash');
   countdownDigit('GO!');
   dom.countdown.classList.add('is-go');
@@ -426,6 +549,7 @@ function updateCountdown(dt) {
   }
   if (state.countdownTime >= 1.6 && state.countdownTick < 2) {
     state.countdownTick = 2;
+    dom.countdown.classList.remove('is-intro');
     countdownDigit('1');
     if (audio) audio.countdown(1);
     if (runner) runner.onCountdownTick();
@@ -478,13 +602,15 @@ function updateRunning(dt) {
     }
   }
 
+  updateOpponents(dt, 'running');
+
   if (state.phase !== 'running') return;
 
   state.cameraKick = damp(state.cameraKick, 0, 8, dt);
   const swaySpeed = clamp(state.speed / 11, 0, 1);
   const sway = state.isFalling ? 0 : Math.sin(state.raceTime * 10.5) * 0.018 * swaySpeed;
   const z = COURSE.startZ - state.distance;
-  runner.group.position.set(sway, 0, z);
+  runner.group.position.set(PLAYER_LANE_X + sway, 0, z);
   playerPos.copy(runner.group.position);
 
   runner.update(dt, elapsed, {
@@ -575,13 +701,13 @@ function trip(dir) {
     const foot = runner.getFootWorldPosition(dir, tempVec);
     fx.spawnDust(tempVec, 4, 1.25);
   }
-  const messages = ['哎呀，同方向啦！', '左脚绊右脚…', '咕咚！摔了个大屁股蹲', '慢一点点，别着急呀'];
+  const messages = ['哎呀，同方向啦！', '左脚绊右脚…', '咕咚！摔了个大马趴', '慢一点点，别着急呀'];
   showToast(messages[Math.floor(Math.random() * messages.length)], 'bad', 1500);
   flashScreen('255, 125, 135', 0.28, 340);
   refreshKeys();
   refreshCombo();
   updateHud();
-  announce('摔倒了，等待小兔爬起来。');
+  announce('摔倒了，等待 GoRun 爬起来。');
 }
 
 function finishRace() {
@@ -597,9 +723,10 @@ function finishRace() {
   state.finishElapsed = 0;
   state.maxSpeed = Math.max(state.maxSpeed, 0);
   clearToast();
-  runner.group.position.set(0, 0, COURSE.finishZ - FINISH_PAST);
+  runner.group.position.set(PLAYER_LANE_X, 0, COURSE.finishZ - FINISH_PAST);
   playerPos.copy(runner.group.position);
   fx.hideDizzy();
+  buildFinishBoard();
   const hadBest = Boolean(state.best);
   state.newBest = !hadBest || state.finishTime < state.best;
   if (state.newBest) {
@@ -631,66 +758,96 @@ function finishRace() {
 function updateFinished(dt) {
   state.finishElapsed += dt;
   if (!runner) return;
-  runner.group.position.set(0, 0, COURSE.finishZ - FINISH_PAST);
+  runner.group.position.set(PLAYER_LANE_X, 0, COURSE.finishZ - FINISH_PAST);
   playerPos.copy(runner.group.position);
   runner.update(dt, elapsed, { mode: 'finished', speed: 0, fallTime: 0 });
+  updateOpponents(dt, 'finished');
   if (!state.resultsShown && state.finishElapsed >= FINISH_DELAY) {
     showResults();
   }
 }
 
-function getGrade(time, falls) {
-  if (time <= 13.0) {
-    return {
-      letter: 'S',
-      label: '闪电兔',
-      title: '快得只剩耳朵！',
-      summary: falls === 0 ? '没有摔倒，速度拉满，小短腿直接跑出了残影。' : '虽然打了个滚，还是飞快地冲过了终点。',
-    };
-  }
-  if (time <= 16.2) {
-    return {
-      letter: 'A',
-      label: '风之兔',
-      title: '漂亮的一跑！',
-      summary: falls === 0 ? '节奏顺滑，像一阵刚出炉的小旋风。' : '摔了一跤也不怕，风一样的兔子又站起来啦。',
-    };
-  }
-  if (time <= 21.5) {
-    return {
-      letter: 'B',
-      label: '稳稳达阵',
-      title: '稳稳抵达终点！',
-      summary: '不慌不忙跑完了 100 米，下一次可以再快一点点。',
-    };
-  }
-  return {
-    letter: 'C',
-    label: '坚持到底',
-    title: '冲线就是英雄！',
-    summary: '路上可能有点跌跌撞撞，但你还是把 100 米装进兜里啦。',
-  };
+function placeLabel(place) {
+  if (place === 1) return '冠军';
+  if (place === 2) return '亚军';
+  if (place === 3) return '季军';
+  return '完赛';
+}
+
+function renderRaceBoard() {
+  if (!dom.raceBoard) return;
+  dom.raceBoard.innerHTML = state.finishBoard
+    .map((entry, index) => {
+      const rank = index + 1;
+      const color = '#' + entry.profile.kit.top.toString(16).padStart(6, '0');
+      const meta = entry.isPlayer
+        ? 'GORUN · 你的成绩'
+        : entry.profile.country + ' · PB ' + entry.profile.pb.toFixed(2);
+      return (
+        '<li class="race-row' +
+        (entry.isPlayer ? ' is-you' : '') +
+        '" data-rank="' +
+        rank +
+        '" style="--row-color:' +
+        color +
+        '">' +
+        '<span class="race-rank">' +
+        rank +
+        '</span>' +
+        '<span class="race-dot" aria-hidden="true"></span>' +
+        '<span class="race-name"><b>' +
+        entry.name +
+        '</b><small>' +
+        meta +
+        '</small></span>' +
+        '<span class="race-time">' +
+        formatTime(entry.time) +
+        '<small>s</small></span>' +
+        '</li>'
+      );
+    })
+    .join('');
 }
 
 function showResults() {
   if (state.resultsShown) return;
   state.resultsShown = true;
-  const grade = getGrade(state.finishTime, state.falls);
+  const place = state.playerPlace;
+  const placeClass = place <= 3 ? String(place) : 'other';
   dom.resultTime.textContent = formatTime(state.finishTime);
   dom.newBestBadge.hidden = !state.newBest;
   dom.bestResult.textContent = formatTime(state.best) + 's';
   dom.fallResult.textContent = String(state.falls);
   dom.comboResult.textContent = String(state.maxCombo);
   dom.maxSpeedResult.innerHTML = Math.round(state.maxSpeed * 3.6) + '<small>km/h</small>';
-  dom.gradeBadge.dataset.grade = grade.letter;
-  dom.gradeLetter.textContent = grade.letter;
-  dom.gradeLabel.textContent = grade.label;
-  dom.resultsTitle.textContent = state.newBest ? '新纪录！' : grade.title;
-  dom.resultSummary.textContent = grade.summary;
+  dom.placeBadge.dataset.place = placeClass;
+  dom.placeNumber.textContent = String(place);
+  dom.placeLabel.textContent = placeLabel(place);
+  dom.resultsTitle.textContent = place <= 3 ? placeLabel(place) + '！' : '第 ' + place + ' 名';
+  if (place === 1) {
+    dom.resultSummary.textContent = '你在一群飞人中间率先冲线，把这场 100 米决赛拿下了！';
+  } else if (place <= 3) {
+    dom.resultSummary.textContent = '你和世界级飞人一起站上领奖台，跑出了 ' + formatTime(state.finishTime) + ' 秒。';
+  } else if (state.newBest) {
+    dom.resultSummary.textContent = '这次是第 ' + place + ' 名，但你刷新了自己的最佳成绩，继续追！';
+  } else if (state.falls > 0) {
+    dom.resultSummary.textContent = '第 ' + place + ' 名完赛。摔了 ' + state.falls + ' 次也没关系，下一次把节奏踩稳。';
+  } else {
+    dom.resultSummary.textContent = '第 ' + place + ' 名完赛。飞人们很快，但你的下一次会更快。';
+  }
+  renderRaceBoard();
   updateBestLabel();
   showScreen(dom.results);
   announce(
-    '完赛。用时 ' + formatTime(state.finishTime) + ' 秒，摔倒 ' + state.falls + ' 次，最高连击 ' + state.maxCombo + '。'
+    '第 ' +
+      place +
+      ' 名。用时 ' +
+      formatTime(state.finishTime) +
+      ' 秒，摔倒 ' +
+      state.falls +
+      ' 次，最高连击 ' +
+      state.maxCombo +
+      '。'
   );
 }
 
@@ -721,6 +878,7 @@ function updateHud() {
   const displaySpeed = state.isFalling ? 0 : state.speed;
   dom.speedValue.textContent = String(Math.round(displaySpeed * 3.6));
   dom.speedFill.style.width = clamp(displaySpeed / MAX_SPEED, 0, 1) * 100 + '%';
+  refreshPlace();
 }
 
 function updateRushVisual() {
@@ -770,7 +928,7 @@ function updateCamera(dt) {
   const camera = stage.camera;
   const isPortrait = camera.aspect < 0.82;
   const isShortLandscape = window.innerWidth > window.innerHeight && window.innerHeight < 560;
-  const player = runner ? runner.group.position : tempVec.set(0, 0, COURSE.startZ);
+  const player = runner ? runner.group.position : tempVec.set(PLAYER_LANE_X, 0, COURSE.startZ);
   const speedNorm = clamp((state.speed - 1.5) / 9.5, 0, 1);
   cameraRig.targetFov = cameraRig.targetFov || 50;
 
@@ -782,24 +940,35 @@ function updateCamera(dt) {
     cameraRig.fov = damp(cameraRig.fov, fov, 3.5, dt);
     cameraRig.shake = damp(cameraRig.shake, 0, 4, dt);
   } else if (state.phase === 'countdown') {
-    const t = easeInOutCubic(clamp(state.countdownTime / COUNTDOWN_DURATION, 0, 1));
-    const startX = isPortrait ? 0.7 : 1.5;
-    const startY = isPortrait ? 1.32 : 1.1;
-    const startZ = isPortrait ? 5.4 : 4.1;
-    const endX = isPortrait ? 0.5 : 1.0;
-    const endY = isPortrait ? 1.33 : 1.24;
-    const endZ = isPortrait ? 6.0 : 4.9;
-    cameraRig.base.set(
-      player.x + lerp(startX, endX, t),
-      lerp(startY, endY, t) + Math.sin(elapsed * 5.5) * 0.004,
-      player.z + lerp(startZ, endZ, t)
-    );
-    cameraRig.look.set(
-      player.x + lerp(0.0, 0.02, t),
-      lerp(1.16, 1.27, t) + (isShortLandscape ? 0.22 : 0),
-      player.z - lerp(2.8, 5.8, t)
-    );
-    cameraRig.fov = lerp(isPortrait ? 60 : 57, isPortrait ? 62 : 59, t);
+    if (state.countdownTime < 1.6) {
+      const t = clamp(state.countdownTime / 1.6, 0, 1);
+      const lineupDistance = isPortrait ? 11.6 : 8.35;
+      const lineupX = isPortrait ? 0.05 : 0.38;
+      cameraRig.base.set(
+        lineupX + lerp(0.2, 0, t),
+        (isPortrait ? 3.0 : 2.62) + t * 0.05,
+        COURSE.startZ - lerp(lineupDistance + 0.55, lineupDistance, t)
+      );
+      cameraRig.look.set(
+        isPortrait ? 0.12 : 0.08,
+        (isPortrait ? 1.38 : 1.31) + (isShortLandscape ? 0.12 : 0),
+        COURSE.startZ + 0.08
+      );
+      cameraRig.fov = isPortrait ? 60 : 50;
+    } else {
+      const t = easeInOutCubic(clamp((state.countdownTime - 1.6) / (COUNTDOWN_DURATION - 1.6), 0, 1));
+      cameraRig.base.set(
+        player.x + lerp(0.82, 0.55, t),
+        lerp(1.42, 1.24, t) + Math.sin(elapsed * 5.5) * 0.004,
+        player.z + lerp(5.65, 4.9, t)
+      );
+      cameraRig.look.set(
+        player.x + 0.02,
+        lerp(1.18, 1.27, t) + (isShortLandscape ? 0.22 : 0),
+        player.z - lerp(4.7, 5.9, t)
+      );
+      cameraRig.fov = lerp(57, 59, t);
+    }
     cameraRig.shake = damp(cameraRig.shake, 0, 5, dt);
   } else if (state.phase === 'running') {
     let targetX;
@@ -812,7 +981,7 @@ function updateCamera(dt) {
     let lambda;
 
     if (state.isFalling) {
-      targetX = player.x + (isPortrait ? 0.8 : 1.28);
+      targetX = player.x + (isPortrait ? 0.55 : 0.9);
       targetY = 0.98;
       targetZ = player.z + (isPortrait ? 4.1 : 3.85);
       lookX = player.x;
@@ -821,13 +990,13 @@ function updateCamera(dt) {
       targetFov = isPortrait ? 60 : 57;
       lambda = 4.2;
     } else {
-      const lateral = isPortrait ? 0.55 : 1.02;
+      const lateral = isPortrait ? 0.32 : 0.48;
       const sway = Math.sin(elapsed * 2.2) * 0.03 * speedNorm + state.cameraKick;
       const bob = Math.sin(elapsed * 9.5) * 0.008 * speedNorm;
       targetX = player.x + lateral + sway;
       targetY = (isPortrait ? 1.28 : 1.24) + bob + speedNorm * 0.02;
       targetZ = player.z + (isPortrait ? 5.5 : 4.9) + speedNorm * 0.25;
-      lookX = player.x + (isPortrait ? 0.08 : 0.02);
+      lookX = player.x + (isPortrait ? 0.03 : 0.0);
       lookY = 1.27 + Math.sin(elapsed * 6.2) * 0.004 * speedNorm + (isShortLandscape ? 0.32 : 0);
       lookZ = player.z - (isPortrait ? 5.1 : 5.9) - speedNorm * 0.4;
       targetFov = (isPortrait ? 61 : 59) + speedNorm * (isPortrait ? 9 : 10) + (isShortLandscape ? 2 : 0);
@@ -926,7 +1095,8 @@ function returnToMenu() {
   state.phase = 'menu';
   dom.body.dataset.mode = 'menu';
   dom.pauseBtn.hidden = true;
-  if (runner) runner.group.position.set(0, 0, COURSE.startZ);
+  if (runner) runner.group.position.set(PLAYER_LANE_X, 0, COURSE.startZ);
+  resetOpponents();
   snapCameraToMenu();
   showScreen(dom.menu);
   updateBestLabel();
@@ -977,17 +1147,16 @@ function restartGame() {
 }
 
 async function copyResult() {
-  const grade = getGrade(state.finishTime, state.falls);
   const text =
-    'GoRun 100m · ' +
+    'GoRun 100m · 第 ' +
+    state.playerPlace +
+    ' 名 · ' +
     formatTime(state.finishTime) +
-    's · 评级 ' +
-    grade.letter +
-    ' · 摔倒 ' +
+    's · 摔倒 ' +
     state.falls +
     ' 次 · 最高连击 ' +
     state.maxCombo +
-    '\n来挑战我的可爱一百米：' +
+    '\n来和博尔特、苏炳添等飞人跑一场：' +
     window.location.href;
   try {
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -1134,9 +1303,10 @@ function bindEvents() {
 function update(dt) {
   if (!stage || !runner) return;
   if (state.phase === 'menu') {
-    runner.group.position.set(0, 0, COURSE.startZ);
+    runner.group.position.set(PLAYER_LANE_X, 0, COURSE.startZ);
     playerPos.copy(runner.group.position);
     runner.update(dt, elapsed, { mode: 'menu', speed: 0, fallTime: 0 });
+    updateOpponents(dt, 'menu');
     fx.update(dt);
     updateHud();
     refreshComboIfNeeded();
@@ -1144,9 +1314,11 @@ function update(dt) {
   } else if (state.phase === 'countdown') {
     updateCountdown(dt);
     if (state.phase === 'countdown') {
-      runner.group.position.set(0, 0, COURSE.startZ);
+      runner.group.position.set(PLAYER_LANE_X, 0, COURSE.startZ);
       playerPos.copy(runner.group.position);
-      runner.update(dt, elapsed, { mode: 'countdown', speed: 0, fallTime: 0 });
+      const liningUp = state.countdownTime < 1.6;
+      runner.update(dt, elapsed, { mode: liningUp ? 'lineup' : 'countdown', speed: 0, fallTime: 0 });
+      updateOpponents(dt, liningUp ? 'lineup' : 'countdown');
       fx.update(dt);
       updateHud();
       updateCamera(dt);
@@ -1200,8 +1372,25 @@ async function boot() {
     stage = createWorld(dom.stage);
     runner = createRunner();
     fallDuration = runner.fallDuration || fallDuration;
-    runner.group.position.set(0, 0, COURSE.startZ);
+    runner.group.position.set(PLAYER_LANE_X, 0, COURSE.startZ);
     stage.scene.add(runner.group);
+    state.opponents = OPPONENTS.map((profile) => {
+      const controller = createOpponent(profile);
+      controller.group.position.set(laneCenterX(profile.lane), 0, COURSE.startZ);
+      controller.group.visible = false;
+      controller.update(0, 0, { mode: 'menu', speedNorm: 0 });
+      stage.scene.add(controller.group);
+      return {
+        profile,
+        controller,
+        group: controller.group,
+        targetTime: pickRaceTime(profile),
+        distance: 0,
+        finished: false,
+        finishT: 0,
+        speedNorm: 0,
+      };
+    });
     fx = createFX(stage.scene);
     audio = new AudioKit();
     syncSoundIcon();

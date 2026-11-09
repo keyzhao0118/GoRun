@@ -10,8 +10,9 @@ import {
 } from './utils.js';
 
 export const COURSE = {
-  laneCount: 5,
-  laneWidth: 1.45,
+  laneCount: 8,
+  laneWidth: 1.3,
+  playerLane: 4,
   startZ: 0.3,
   finishZ: -99.7,
   length: 100,
@@ -20,6 +21,12 @@ export const COURSE = {
 };
 
 COURSE.trackWidth = COURSE.laneCount * COURSE.laneWidth;
+
+export function laneCenterX(laneNumber) {
+  return -COURSE.trackWidth / 2 + (laneNumber - 0.5) * COURSE.laneWidth;
+}
+
+export const PLAYER_LANE_X = laneCenterX(COURSE.playerLane);
 
 const skyVert = `
   varying vec3 vWorldPosition;
@@ -374,7 +381,7 @@ function makeTrack(root, rng, palette, maxAniso) {
       ctx.fillRect(w * 0.34, 0, w * 0.12, h);
       ctx.fillRect(w * 0.54, 0, w * 0.12, h);
     },
-    { repeat: [2, 16] }
+    { repeat: [3, 16] }
   );
   trackTexture.anisotropy = maxAniso;
 
@@ -482,8 +489,9 @@ function makeTrack(root, rng, palette, maxAniso) {
     pawPositions.push(z);
   }
   const paws = new THREE.InstancedMesh(pawGeo, pawMat, pawPositions.length);
+  const playerLaneCenter = -course.trackWidth / 2 + (course.playerLane - 0.5) * course.laneWidth;
   pawPositions.forEach((z, i) => {
-    dummy.position.set(Math.sin(i * 2.1) * 0.24, 0.027, z);
+    dummy.position.set(playerLaneCenter + Math.sin(i * 2.1) * 0.22, 0.027, z);
     dummy.rotation.set(0, 0, 0);
     dummy.scale.setScalar(1);
     dummy.updateMatrix();
@@ -504,7 +512,7 @@ function makeTrack(root, rng, palette, maxAniso) {
     const mark = new THREE.Mesh(starGeo, heartMat);
     mark.rotation.x = -Math.PI / 2;
     mark.rotation.z = rng() * TAU;
-    mark.position.set((rng() > 0.5 ? 1 : -1) * (2.3 + rng() * 1.1), 0.029, course.finishZ + 2 + rng() * 12);
+    mark.position.set((rng() > 0.5 ? 1 : -1) * (3.4 + rng() * 1.4), 0.029, course.finishZ + 2 + rng() * 12);
     root.add(mark);
   }
 }
@@ -616,7 +624,7 @@ function makeStadium(root, rng, palette, dynamic, maxAniso) {
   const rows = 6;
   const rowDepth = 3.25;
   const rowHeight = 1.25;
-  const innerX = 7.6;
+  const innerX = 9.2;
   const crowd = { bodies: [], heads: [] };
   const tierColors = [0xeedcc7, 0xdcc4b2, 0xe8d2bd, 0xd4b9a7, 0xeedcc7, 0xe0c7b4];
   const flagColors = [0xff7d8d, 0x7bdcc7, 0xffd36e, 0xb7a3f3, 0xfff2df];
@@ -850,18 +858,19 @@ function makeAdBoards(root, palette, maxAniso) {
 
   const boardMat = new THREE.MeshStandardMaterial({ map: boardTexture, roughness: 0.78 });
   const wallMat = makeStandard(0x4d3740, { roughness: 0.8 });
+  const boardX = COURSE.trackWidth / 2 + 1.18;
   for (const side of [-1, 1]) {
     const board = new THREE.Mesh(new THREE.PlaneGeometry(standLength, 0.9), boardMat);
-    board.position.set(side * 5.25, 0.5, z);
+    board.position.set(side * boardX, 0.5, z);
     board.rotation.y = side < 0 ? Math.PI / 2 : -Math.PI / 2;
     root.add(board);
 
     const wall = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.92, standLength), wallMat);
-    wall.position.set(side * 5.37, 0.46, z);
+    wall.position.set(side * (boardX + 0.12), 0.46, z);
     root.add(wall);
 
     const rail = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.13, standLength), makeStandard(0xfff2df));
-    rail.position.set(side * 5.3, 0.97, z);
+    rail.position.set(side * (boardX + 0.05), 0.97, z);
     root.add(rail);
   }
 }
@@ -937,8 +946,8 @@ function makeArch(root, rng, palette, dynamic, options) {
   const { z, label, subtitle, accent, secondary, finish } = options;
   const group = new THREE.Group();
   group.position.z = z;
-  const pillarX = 4.6;
-  const height = options.height || 5.35;
+  const pillarX = COURSE.trackWidth / 2 + 1.05;
+  const height = options.height || 5.7;
   const creamMat = makeStandard(0xfff1dd, { roughness: 0.78 });
   const accentMat = makeStandard(accent, { roughness: 0.72 });
   const secondaryMat = makeStandard(secondary, { roughness: 0.72 });
@@ -987,8 +996,8 @@ function makeArch(root, rng, palette, dynamic, options) {
     group.add(cap);
   }
 
-  const signWidth = 6.25;
-  const signHeight = 1.35;
+  const signWidth = 8.7;
+  const signHeight = 1.5;
   const signBacking = new THREE.Mesh(
     new THREE.BoxGeometry(signWidth + 0.25, signHeight + 0.2, 0.22),
     makeStandard(0x4b3540, { roughness: 0.7 })
@@ -1013,15 +1022,16 @@ function makeArch(root, rng, palette, dynamic, options) {
   );
   buntingGeo.computeVertexNormals();
   const buntingColors = [0xff7587, 0xffd36e, 0x7bdcc7, 0xc7b3ff, 0xfff1dd];
+  const buntingCount = 18;
   const bunting = new THREE.InstancedMesh(
     buntingGeo,
     new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, toneMapped: false }),
-    12
+    buntingCount
   );
   const dummy = new THREE.Object3D();
   const color = new THREE.Color();
-  for (let i = 0; i < 12; i += 1) {
-    dummy.position.set(-3.3 + i * 0.6, height - 0.85, 0.08);
+  for (let i = 0; i < buntingCount; i += 1) {
+    dummy.position.set(-5.1 + i * 0.6, height - 0.85, 0.08);
     dummy.rotation.set(0, 0, 0);
     dummy.updateMatrix();
     bunting.setMatrixAt(i, dummy.matrix);
@@ -1033,9 +1043,9 @@ function makeArch(root, rng, palette, dynamic, options) {
   group.add(bunting);
 
   const stringPoints = [];
-  for (let i = 0; i < 20; i += 1) {
-    const t = i / 19;
-    const x = -3.35 + t * 6.7;
+  for (let i = 0; i < 28; i += 1) {
+    const t = i / 27;
+    const x = -5.15 + t * 10.3;
     const y = height - 0.78 - Math.sin(t * Math.PI) * 0.16;
     stringPoints.push(new THREE.Vector3(x, y, 0.07));
   }
@@ -1185,17 +1195,30 @@ function makeStartingBlocks(root, palette) {
   group.position.z = COURSE.startZ + 0.72;
   const mat = makeStandard(palette.coralDeep, { roughness: 0.74 });
   const topMat = makeStandard(0xffd36e, { roughness: 0.7 });
-  for (const side of [-1, 1]) {
-    const block = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.18, 0.56), mat);
-    block.position.set(side * 0.29, 0.09, 0);
-    block.rotation.x = 0.14;
-    block.castShadow = true;
-    group.add(block);
-    const top = new THREE.Mesh(new THREE.BoxGeometry(0.29, 0.035, 0.2), topMat);
-    top.position.set(side * 0.29, 0.185, -0.12);
-    top.rotation.x = 0.14;
-    group.add(top);
+  const dummy = new THREE.Object3D();
+  const count = COURSE.laneCount * 2;
+  const blocks = new THREE.InstancedMesh(new THREE.BoxGeometry(0.26, 0.18, 0.56), mat, count);
+  const tops = new THREE.InstancedMesh(new THREE.BoxGeometry(0.29, 0.035, 0.2), topMat, count);
+  let index = 0;
+  for (let lane = 0; lane < COURSE.laneCount; lane += 1) {
+    const laneX = -COURSE.trackWidth / 2 + COURSE.laneWidth * (lane + 0.5);
+    for (const side of [-1, 1]) {
+      dummy.position.set(laneX + side * 0.27, 0.09, 0);
+      dummy.rotation.set(0.14, 0, 0);
+      dummy.updateMatrix();
+      blocks.setMatrixAt(index, dummy.matrix);
+
+      dummy.position.set(laneX + side * 0.27, 0.185, -0.12);
+      dummy.updateMatrix();
+      tops.setMatrixAt(index, dummy.matrix);
+      index += 1;
+    }
   }
+  blocks.instanceMatrix.needsUpdate = true;
+  tops.instanceMatrix.needsUpdate = true;
+  blocks.castShadow = true;
+  blocks.receiveShadow = true;
+  group.add(blocks, tops);
   root.add(group);
 }
 
@@ -1243,7 +1266,7 @@ function makeProps(root, rng, palette, dynamic) {
     const z = 2 - i * 14;
     const side = i % 2 === 0 ? -1 : 1;
     const group = new THREE.Group();
-    group.position.set(side * 6.4, 0, z);
+    group.position.set(side * (COURSE.trackWidth / 2 + 2.35), 0, z);
     const pole = new THREE.Mesh(
       new THREE.CylinderGeometry(0.045, 0.055, 2.7, 6),
       makeStandard(0xfff0dc)

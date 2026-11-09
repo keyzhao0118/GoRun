@@ -4,3 +4,6 @@ Thumbs.db
 _site/
 .ref/
 *.log
+
+dist/
+.xhs/
