@@ -3826,3 +3826,206 @@ noscript .fatal {
     font-size: 8px;
   }
 }
+
+
+/* ------------------------------------------------------------------
+   Finish dive + large touch halves
+   ------------------------------------------------------------------ */
+
+.dive-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 4px 12px;
+  border: 2px solid var(--ink);
+  border-radius: 999px;
+  background: var(--sun);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  line-height: 1;
+  box-shadow: 0 3px 0 rgba(70, 50, 60, 0.2);
+  pointer-events: auto;
+  cursor: pointer;
+  transition: transform 0.16s var(--ease-out), background 0.2s ease, opacity 0.2s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.dive-btn .icon {
+  width: 14px;
+  height: 14px;
+}
+
+.dive-btn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 rgba(70, 50, 60, 0.2);
+}
+
+.dive-btn[disabled] {
+  opacity: 0.42;
+  cursor: default;
+  filter: saturate(0.5);
+}
+
+.dive-btn.is-hot {
+  background: var(--coral);
+  color: var(--cream);
+  animation: diveHot 0.9s ease-in-out infinite;
+}
+
+.dive-btn.is-lunging {
+  background: var(--mint);
+  color: #22665c;
+}
+
+.dive-btn.is-hot .icon {
+  color: var(--cream);
+}
+
+.dive-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 34px;
+  height: 18px;
+  margin-left: 1px;
+  padding: 0 5px;
+  border: 1px solid rgba(70, 50, 60, 0.35);
+  border-radius: 5px;
+  background: rgba(255, 249, 240, 0.72);
+  color: var(--ink-soft);
+  font-family: inherit;
+  font-size: 7px;
+  font-weight: 600;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+body.is-touch .dive-key {
+  display: none;
+}
+
+@keyframes diveHot {
+  0%, 100% { transform: translateY(0) scale(1); box-shadow: 0 3px 0 rgba(70, 50, 60, 0.2); }
+  50% { transform: translateY(-2px) scale(1.025); box-shadow: 0 5px 0 rgba(70, 50, 60, 0.18), 0 0 0 5px rgba(255, 117, 135, 0.1); }
+}
+
+.tap-zone {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  z-index: 20;
+  width: 50%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.22s ease, visibility 0.22s ease;
+}
+
+.tap-left {
+  left: 0;
+  background: linear-gradient(90deg, rgba(255, 247, 236, 0.1), transparent 36%);
+}
+
+.tap-right {
+  right: 0;
+  background: linear-gradient(270deg, rgba(255, 247, 236, 0.1), transparent 36%);
+}
+
+body.is-touch[data-mode='running'] .tap-zone {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+}
+
+.tap-chevron {
+  display: block;
+  color: rgba(255, 247, 236, 0.36);
+  font-family: Fredoka, Arial, sans-serif;
+  font-size: 78px;
+  font-weight: 600;
+  line-height: 0.8;
+  text-shadow: 0 4px 0 rgba(70, 50, 60, 0.08);
+  transition: transform 0.15s var(--ease-out), color 0.15s ease;
+}
+
+.tap-label {
+  padding: 3px 8px;
+  border: 1px solid rgba(255, 247, 236, 0.26);
+  border-radius: 999px;
+  background: rgba(255, 247, 236, 0.28);
+  color: rgba(255, 247, 236, 0.76);
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  line-height: 1;
+}
+
+.tap-zone.is-hit .tap-chevron {
+  color: rgba(255, 247, 236, 0.82);
+  transform: scale(1.16);
+}
+
+.tap-zone.is-hit .tap-label {
+  color: var(--ink);
+  background: rgba(255, 247, 236, 0.8);
+}
+
+@media (max-width: 680px) {
+  .dive-btn {
+    min-height: 33px;
+    padding: 5px 14px;
+    font-size: 11px;
+  }
+
+  .dive-btn .icon {
+    width: 15px;
+    height: 15px;
+  }
+
+  .tap-chevron {
+    font-size: 64px;
+  }
+
+  .tap-zone {
+    justify-content: center;
+  }
+}
+
+@media (max-height: 580px) and (orientation: landscape) {
+  .dive-btn {
+    min-height: 25px;
+    padding: 2px 10px;
+    font-size: 9px;
+  }
+
+  .dive-key {
+    height: 15px;
+    min-width: 28px;
+    font-size: 6px;
+  }
+
+  .tap-chevron {
+    font-size: 48px;
+  }
+
+  .tap-label {
+    font-size: 7px;
+  }
+}
+
+.is-lunging .speed-vignette {
+  opacity: 1;
+}

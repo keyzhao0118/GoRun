@@ -817,6 +817,35 @@ function poseRun(rig, phase, intensity, style, stepPulse, stepDir) {
   rig.shadow.material.opacity = 0.22;
 }
 
+function poseLunge(rig, time, lungeT) {
+  resetRigPose(rig);
+  const push = smoothstep(clamp(lungeT / 0.24, 0, 1));
+  const flutter = Math.sin(time * 18) * 0.02;
+  rig.tilt.rotation.x = -0.22 - push * 0.3;
+  rig.bob.position.y = 0.05 + Math.sin(clamp(lungeT, 0, 1) * Math.PI) * 0.08;
+  rig.upper.rotation.x = -0.26 - push * 0.24;
+  rig.upper.rotation.z = flutter;
+  rig.head.rotation.x = 0.34 + push * 0.12;
+  rig.head.rotation.z = -flutter * 0.6;
+
+  rig.armL.shoulder.rotation.set(1.46, 0, -0.18);
+  rig.armR.shoulder.rotation.set(1.46, 0, 0.18);
+  rig.armL.elbow.rotation.x = 0.1;
+  rig.armR.elbow.rotation.x = 0.1;
+
+  rig.legL.hip.rotation.x = -0.55 - push * 0.15;
+  rig.legR.hip.rotation.x = -0.18;
+  rig.legL.hip.rotation.z = 0.13;
+  rig.legR.hip.rotation.z = -0.1;
+  rig.legL.knee.rotation.x = -0.42;
+  rig.legR.knee.rotation.x = -0.24;
+  rig.legL.foot.rotation.x = 0.35;
+  rig.legR.foot.rotation.x = 0.22;
+
+  rig.shadow.scale.set(0.95, 0.85, 1);
+  rig.shadow.material.opacity = 0.15;
+}
+
 function poseFall(rig, fallT) {
   resetRigPose(rig);
   const impact = clamp(fallT / 0.34, 0, 1);
@@ -1008,6 +1037,7 @@ export function createRunner() {
     const isCountdown = mode === 'countdown';
     const isMenu = mode === 'menu';
     const isRunning = mode === 'running';
+    const isLunging = mode === 'lunging';
     const isFalling = mode === 'falling';
     const isFinished = mode === 'finished';
 
@@ -1020,6 +1050,8 @@ export function createRunner() {
       poseIdle(rig, state.time, PLAYER_PROFILE, false);
     } else if (isCountdown) {
       poseReady(rig, state.time, PLAYER_PROFILE, state.readyBounce, state.goBurst);
+    } else if (isLunging) {
+      poseLunge(rig, state.time, params.lungeT || 0);
     } else if (isRunning) {
       const moving = smoothstep(clamp(speed / 2.2, 0, 1));
       state.runPhase += dt * (2.2 + speed * 1.7) * moving;
@@ -1040,6 +1072,7 @@ export function createRunner() {
 
     let expression = 'normal';
     if (isFalling) expression = 'dizzy';
+    else if (isLunging) expression = 'focused';
     else if (isFinished) expression = 'happy';
     else if (isRunning) expression = 'focused';
     else if (isCountdown) expression = 'focused';

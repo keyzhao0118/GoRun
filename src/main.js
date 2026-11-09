@@ -8,6 +8,9 @@ import { clamp, damp, lerp, easeInOutCubic, canvasTexture, roundRectPath, create
 const COUNTDOWN_DURATION = 2.4;
 const FINISH_DELAY = 3.4;
 const PODIUM_Z = COURSE.finishZ - 4.8;
+const LUNGE_DURATION = 0.55;
+const LUNGE_SPEED = 19;
+const LUNGE_HOT_AT = 90;
 const BEST_KEY = 'gorun.best.v1';
 const MAX_SPEED = 10.5;
 let fallDuration = 1.55;
@@ -33,8 +36,13 @@ const dom = {
   comboBadge: $('#comboBadge'),
   comboValue: $('#comboValue'),
   stepHint: $('#stepHint'),
+  diveBtn: $('#diveBtn'),
+  diveLabel: $('#diveLabel'),
+  diveKey: $('#diveKey'),
   leftKey: $('#leftKey'),
   rightKey: $('#rightKey'),
+  leftZone: $('#leftZone'),
+  rightZone: $('#rightZone'),
   countdown: $('#countdown'),
   countdownKicker: $('#countdownKicker'),
   countdownNumber: $('#countdownNumber'),
@@ -93,6 +101,10 @@ const state = {
   isFalling: false,
   fallTime: 0,
   fallImpactDone: false,
+  isLunging: false,
+  lungeTime: 0,
+  diveFinish: false,
+  diveFallTime: 0,
   finishTime: 0,
   finishElapsed: 0,
   resultsShown: false,
@@ -128,6 +140,7 @@ let lastFrame = performance.now();
 let toastTimer = 0;
 let finishBannerTimer = 0;
 let reducedMotion = false;
+let touchMode = false;
 
 const tempVec = new THREE.Vector3();
 const tempVecA = new THREE.Vector3();
@@ -480,10 +493,24 @@ function syncSoundIcon() {
   }
 }
 
+function updateDiveButton() {
+  if (!dom.diveBtn) return;
+  const running = state.phase === 'running';
+  const canDive = running && !state.isFalling && !state.isLunging;
+  const hot = canDive && state.distance >= LUNGE_HOT_AT;
+  dom.diveBtn.disabled = !canDive;
+  dom.diveBtn.classList.toggle('is-hot', hot);
+  dom.diveBtn.classList.toggle('is-lunging', state.isLunging);
+  dom.diveBtn.setAttribute('aria-label', state.isLunging ? '冲线中' : hot ? '现在冲线' : '冲线');
+  if (dom.diveLabel) {
+    dom.diveLabel.textContent = state.isLunging ? '冲线中…' : hot ? '现在冲线！' : '冲线';
+  }
+}
+
 function refreshKeys() {
   if (!dom.leftKey || !dom.rightKey) return;
   const running = state.phase === 'running';
-  const locked = !running || state.isFalling;
+  const locked = !running || state.isFalling || state.isLunging;
   const expected = locked ? null : state.lastDir === 'left' ? 'right' : state.lastDir === 'right' ? 'left' : 'both';
   dom.leftKey.classList.toggle('is-next', expected === 'left' || expected === 'both');
   dom.rightKey.classList.toggle('is-next', expected === 'right' || expected === 'both');
@@ -493,20 +520,26 @@ function refreshKeys() {
   dom.rightKey.setAttribute('aria-disabled', locked ? 'true' : 'false');
   dom.stepDock.classList.toggle('is-locked', locked);
 
-  let hint = '左右交替按，越快越快！';
+  let hint = touchMode ? '点左右两侧屏幕，交替迈步！' : '左右交替按，越快越快！';
   if (state.phase === 'countdown') hint = '准备好，要起跑啦…';
-  else if (state.phase === 'menu') hint = '左右交替按，越快越快！';
+  else if (state.phase === 'menu') hint = touchMode ? '点左右两侧屏幕，交替迈步！' : '左右交替按，越快越快！';
   else if (state.phase === 'finished') hint = '冲过终点啦！';
   else if (state.phase === 'paused') hint = '比赛暂停中';
   else if (state.isFalling) hint = '哎呀！等 GoRun 爬起来…';
-  else if (!state.lastDir) hint = '按 ← 或 → 起跑！';
+  else if (state.isLunging) hint = '冲线中…';
+  else if (!state.lastDir) {
+    const startingFresh = state.distance < 0.5;
+    if (touchMode) hint = startingFresh ? '点左右两侧屏幕起跑！' : '继续点左右两侧加速！';
+    else hint = startingFresh ? '按 ← 或 → 起跑！' : '继续按 ← 或 → 加速！';
+  } else if (touchMode) hint = state.lastDir === 'left' ? '下一拍：点右半边' : '下一拍：点左半边';
   else hint = state.lastDir === 'left' ? '下一拍：→ 右' : '下一拍：← 左';
   dom.stepHint.textContent = hint;
+  updateDiveButton();
 }
 
 function refreshCombo(animate = false) {
   if (!dom.comboBadge) return;
-  const visible = state.phase === 'running' && !state.isFalling && state.combo > 1;
+  const visible = state.phase === 'running' && !state.isFalling && !state.isLunging && state.combo > 1;
   dom.comboBadge.hidden = !visible;
   dom.comboValue.textContent = state.combo;
   if (visible && animate) {
@@ -639,9 +672,14 @@ function resetRace() {
   state.falls = 0;
   state.maxSpeed = 0;
   state.isFalling = false;
+  state.isLunging = false;
+  state.lungeTime = 0;
+  state.diveFinish = false;
+  state.diveFallTime = 0;
   state.fallTime = 0;
   state.fallImpactDone = false;
   state.finishTime = 0;
+  dom.body.classList.remove('is-lunging');
   state.finishElapsed = 0;
   state.resultsShown = false;
   state.cameraKick = 0;
@@ -792,6 +830,17 @@ function updateRunning(dt) {
     if (state.fallTime >= fallDuration) {
       finishFall();
     }
+  } else if (state.isLunging) {
+    state.lungeTime += dt;
+    state.speed = LUNGE_SPEED;
+    state.targetSpeed = 0;
+    state.distance += LUNGE_SPEED * dt;
+    state.maxSpeed = Math.max(state.maxSpeed, state.speed);
+    if (state.distance >= COURSE.length) {
+      finishRace();
+    } else if (state.lungeTime >= LUNGE_DURATION) {
+      endLungeFall();
+    }
   } else {
     if (state.lastStepAt >= 0 && state.raceTime - state.lastStepAt > 0.42) {
       state.targetSpeed = Math.max(0, state.targetSpeed - 17 * dt);
@@ -801,9 +850,9 @@ function updateRunning(dt) {
     state.speed = clamp(state.speed, 0, MAX_SPEED);
     state.distance += state.speed * dt;
     state.maxSpeed = Math.max(state.maxSpeed, state.speed);
-    if (!state.sprintNotified && state.distance >= 90) {
+    if (!state.sprintNotified && state.distance >= LUNGE_HOT_AT) {
       state.sprintNotified = true;
-      showToast('最后 10 米，冲呀！', 'good', 1300);
+      showToast('最后 10 米！现在可以冲线了', 'good', 1600);
     }
     if (state.distance >= COURSE.length) {
       finishRace();
@@ -824,9 +873,10 @@ function updateRunning(dt) {
   playerPos.copy(runner.group.position);
 
   runner.update(dt, elapsed, {
-    mode: state.isFalling ? 'falling' : 'running',
+    mode: state.isFalling ? 'falling' : state.isLunging ? 'lunging' : 'running',
     speed: state.isFalling ? 0 : state.speed,
     fallTime: state.fallTime,
+    lungeT: state.lungeTime / LUNGE_DURATION,
   });
   updateHud();
   refreshComboIfNeeded();
@@ -853,7 +903,7 @@ function finishFall() {
 }
 
 function tapDirection(dir) {
-  if (state.phase !== 'running' || state.isFalling) return;
+  if (state.phase !== 'running' || state.isFalling || state.isLunging) return;
   flashStepKey(dir);
   const now = state.raceTime;
   const first = state.lastDir === null;
@@ -893,8 +943,10 @@ function tapDirection(dir) {
   updateHud();
 }
 
-function trip(dir) {
+function beginFall(dir, message, tone = 'bad') {
   state.isFalling = true;
+  state.isLunging = false;
+  state.lungeTime = 0;
   state.fallTime = 0;
   state.fallImpactDone = false;
   state.falls += 1;
@@ -904,6 +956,7 @@ function trip(dir) {
   state.targetSpeed = 0;
   state.speed = 0;
   state.cameraKick = 0;
+  dom.body.classList.remove('is-lunging');
   if (audio) audio.fall();
   cameraRig.shake = Math.max(cameraRig.shake, 0.55);
   if (runner) {
@@ -911,8 +964,7 @@ function trip(dir) {
     const foot = runner.getFootWorldPosition(dir, tempVec);
     fx.spawnDust(tempVec, 4, 1.25);
   }
-  const messages = ['哎呀，同方向啦！', '左脚绊右脚…', '咕咚！摔了个大马趴', '慢一点点，别着急呀'];
-  showToast(messages[Math.floor(Math.random() * messages.length)], 'bad', 1500);
+  showToast(message, tone, 1600);
   flashScreen('255, 125, 135', 0.28, 340);
   refreshKeys();
   refreshCombo();
@@ -920,22 +972,75 @@ function trip(dir) {
   announce('摔倒了，等待 GoRun 爬起来。');
 }
 
+function trip(dir) {
+  const messages = ['哎呀，同方向啦！', '左脚绊右脚…', '咕咚！摔了个大马趴', '慢一点点，别着急呀'];
+  beginFall(dir, messages[Math.floor(Math.random() * messages.length)]);
+}
+
+function startLunge() {
+  if (state.phase !== 'running' || state.isFalling || state.isLunging) return;
+  state.isLunging = true;
+  state.lungeTime = 0;
+  state.lastDir = null;
+  state.lastStepAt = -1;
+  state.targetSpeed = 0;
+  state.speed = LUNGE_SPEED;
+  state.cameraKick = 0.16;
+  dom.body.classList.add('is-lunging');
+  cameraRig.shake = Math.max(cameraRig.shake, 0.35);
+  if (runner) {
+    runner.group.updateMatrixWorld(true);
+    const foot = runner.getFootWorldPosition('right', tempVec);
+    fx.spawnDust(tempVec, 4, 1.0);
+    fx.spawnSparkle(tempVecB.set(runner.group.position.x, 1.2, runner.group.position.z - 0.6), 5, 0.75);
+  }
+  flashScreen('255, 211, 110', 0.1, 180);
+  showToast('冲线！向前扑出去！', 'good', 850);
+  refreshKeys();
+  refreshCombo();
+  updateHud();
+  announce('冲线，向前扑出。');
+}
+
+function endLungeFall() {
+  beginFall('right', '扑早啦！没冲过线，等 GoRun 爬起来…');
+}
+
 function finishRace() {
   if (state.phase !== 'running') return;
+  const finishedWithLunge = state.isLunging;
   state.phase = 'finished';
   state.finishTime = state.raceTime;
   state.distance = COURSE.length;
   state.speed = 0;
   state.targetSpeed = 0;
   state.isFalling = false;
+  state.isLunging = false;
+  state.lungeTime = 0;
+  state.diveFinish = false;
+  state.diveFallTime = 0;
   state.fallTime = 0;
   state.resultsShown = false;
   state.finishElapsed = 0;
   state.maxSpeed = Math.max(state.maxSpeed, 0);
+  dom.body.classList.remove('is-lunging');
   clearToast();
   fx.hideDizzy();
   buildFinishBoard();
-  arrangePodium();
+  if (finishedWithLunge) {
+    // Crossing the line doesn't cancel the dive's mandatory fall; it just
+    // means the clock stops before the tumble. The fall is shown as a short
+    // post-finish beat, then the podium ceremony begins.
+    state.diveFinish = true;
+    state.diveFallTime = 0;
+    runner.group.visible = true;
+    runner.group.position.set(PLAYER_LANE_X, 0, COURSE.finishZ - 0.45);
+    playerPos.copy(runner.group.position);
+    for (const npc of state.opponents) npc.group.visible = false;
+    beginFall('right', '压线成功！落地还是要摔一下…');
+  } else {
+    arrangePodium();
+  }
   const hadBest = Boolean(state.best);
   state.newBest = !hadBest || state.finishTime < state.best;
   if (state.newBest) {
@@ -964,7 +1069,17 @@ function finishRace() {
 function updateFinished(dt) {
   state.finishElapsed += dt;
   if (!runner) return;
-  updatePodium(dt);
+  if (state.diveFinish) {
+    state.diveFallTime += dt;
+    runner.update(dt, elapsed, { mode: 'falling', speed: 0, fallTime: state.diveFallTime });
+    if (state.diveFallTime >= 0.95) {
+      state.diveFinish = false;
+      state.isFalling = false;
+      arrangePodium();
+    }
+  } else {
+    updatePodium(dt);
+  }
   if (!state.podiumBannerShown && state.finishElapsed >= 1.45) {
     showPodiumBanner();
   }
@@ -1086,6 +1201,7 @@ function updateHud() {
   dom.speedValue.textContent = String(Math.round(displaySpeed * 3.6));
   dom.speedFill.style.width = clamp(displaySpeed / MAX_SPEED, 0, 1) * 100 + '%';
   refreshPlace();
+  updateDiveButton();
 }
 
 function updateRushVisual() {
@@ -1165,16 +1281,16 @@ function updateCamera(dt) {
     } else {
       const t = easeInOutCubic(clamp((state.countdownTime - 1.6) / (COUNTDOWN_DURATION - 1.6), 0, 1));
       cameraRig.base.set(
-        isPortrait ? 0.15 : 0.22,
-        lerp(2.55, 2.7, t) + Math.sin(elapsed * 5.5) * 0.004,
-        player.z + lerp(6.7, 6.2, t)
+        isPortrait ? -1.8 : -2.3,
+        lerp(2.75, 2.9, t) + Math.sin(elapsed * 5.5) * 0.004,
+        player.z + lerp(7.4, 7.2, t)
       );
       cameraRig.look.set(
-        0.05,
-        lerp(1.12, 1.1, t) + (isShortLandscape ? 0.15 : 0),
-        player.z - lerp(6.6, 6.2, t)
+        isPortrait ? 0.08 : 0.12,
+        lerp(1.15, 1.1, t) + (isShortLandscape ? 0.15 : 0),
+        player.z - lerp(5.2, 5.0, t)
       );
-      cameraRig.fov = lerp(60, 60, t);
+      cameraRig.fov = lerp(65, 66, t);
     }
     cameraRig.shake = damp(cameraRig.shake, 0, 5, dt);
   } else if (state.phase === 'running') {
@@ -1188,13 +1304,13 @@ function updateCamera(dt) {
     let lambda;
 
     if (state.isFalling) {
-      targetX = isPortrait ? 0.1 : 0.18;
-      targetY = 2.05;
-      targetZ = player.z + (isPortrait ? 5.8 : 5.6);
-      lookX = 0.05;
-      lookY = 0.75;
-      lookZ = player.z - 2.0;
-      targetFov = isPortrait ? 63 : 60;
+      targetX = isPortrait ? -1.9 : -2.4;
+      targetY = 2.35;
+      targetZ = player.z + (isPortrait ? 6.2 : 6.0);
+      lookX = 0.1;
+      lookY = 0.7;
+      lookZ = player.z - 1.6;
+      targetFov = isPortrait ? 68 : 66;
       lambda = 4.2;
     } else {
       let trailingGap = 0;
@@ -1204,15 +1320,15 @@ function updateCamera(dt) {
         if (gap > trailingGap) trailingGap = gap;
       }
       const extra = clamp(trailingGap, 0, 6.5);
-      const sway = Math.sin(elapsed * 2.2) * 0.035 * speedNorm + state.cameraKick;
-      const bob = Math.sin(elapsed * 9.5) * 0.01 * speedNorm;
-      targetX = (isPortrait ? 0.12 : 0.2) + sway;
-      targetY = (isPortrait ? 2.9 : 2.7) + bob + speedNorm * 0.1 + extra * 0.035;
-      targetZ = player.z + (isPortrait ? 7.2 : 6.2) + extra + speedNorm * 0.18;
-      lookX = 0.05;
-      lookY = (isPortrait ? 1.05 : 1.1) + (isShortLandscape ? 0.15 : 0);
-      lookZ = player.z - (isPortrait ? 7.2 : 6.2) - extra * 0.15;
-      targetFov = (isPortrait ? 64 : 60) + speedNorm * (isPortrait ? 7 : 8) + (isShortLandscape ? 2 : 0);
+      const sway = Math.sin(elapsed * 2.2) * 0.04 * speedNorm + state.cameraKick;
+      const bob = Math.sin(elapsed * 9.5) * 0.012 * speedNorm;
+      targetX = (isPortrait ? -2.3 : -3.0) + sway;
+      targetY = (isPortrait ? 3.1 : 2.9) + bob + speedNorm * 0.1 + extra * 0.035;
+      targetZ = player.z + (isPortrait ? 8.2 : 7.0) + extra + speedNorm * 0.18;
+      lookX = isPortrait ? 0.08 : 0.12;
+      lookY = (isPortrait ? 1.08 : 1.12) + (isShortLandscape ? 0.15 : 0);
+      lookZ = player.z - (isPortrait ? 5.6 : 4.6) - extra * 0.12;
+      targetFov = (isPortrait ? 74 : 72) + speedNorm * (isPortrait ? 4 : 4) + (isShortLandscape ? 2 : 0);
       lambda = 6.2;
     }
 
@@ -1225,17 +1341,28 @@ function updateCamera(dt) {
     cameraRig.fov = damp(cameraRig.fov, targetFov, 3.2, dt);
     cameraRig.shake = damp(cameraRig.shake, 0, 4.7, dt);
   } else if (state.phase === 'finished') {
-    const t = easeInOutCubic(clamp(state.finishElapsed / 2.8, 0, 1));
-    const podiumZ = podium ? podium.group.position.z : PODIUM_Z;
-    const orbit = Math.sin(state.finishElapsed * 0.32) * 0.05;
-    cameraRig.base.set(
-      lerp(isPortrait ? 0.9 : 1.45, isPortrait ? 0.55 : 0.9, t) + orbit,
-      lerp(isPortrait ? 2.9 : 2.65, isPortrait ? 3.15 : 2.95, t),
-      podiumZ - lerp(isPortrait ? 8.7 : 7.3, isPortrait ? 9.0 : 7.55, t)
-    );
-    cameraRig.look.set(0.0, isPortrait ? 1.1 : 1.3, podiumZ + 0.18);
-    cameraRig.fov = isPortrait ? 58 : 50;
-    cameraRig.shake = damp(cameraRig.shake, 0, 3.5, dt);
+    if (state.diveFinish) {
+      cameraRig.base.set(
+        isPortrait ? PLAYER_LANE_X - 2.0 : PLAYER_LANE_X - 2.9,
+        2.0,
+        COURSE.finishZ - (isPortrait ? 4.4 : 4.2)
+      );
+      cameraRig.look.set(PLAYER_LANE_X + 0.05, 0.72, COURSE.finishZ - 0.35);
+      cameraRig.fov = isPortrait ? 60 : 62;
+      cameraRig.shake = damp(cameraRig.shake, 0, 3.2, dt);
+    } else {
+      const t = easeInOutCubic(clamp(state.finishElapsed / 2.8, 0, 1));
+      const podiumZ = podium ? podium.group.position.z : PODIUM_Z;
+      const orbit = Math.sin(state.finishElapsed * 0.32) * 0.05;
+      cameraRig.base.set(
+        lerp(isPortrait ? 0.9 : 1.45, isPortrait ? 0.55 : 0.9, t) + orbit,
+        lerp(isPortrait ? 2.9 : 2.65, isPortrait ? 3.15 : 2.95, t),
+        podiumZ - lerp(isPortrait ? 8.7 : 7.3, isPortrait ? 9.0 : 7.55, t)
+      );
+      cameraRig.look.set(0.0, isPortrait ? 1.1 : 1.3, podiumZ + 0.18);
+      cameraRig.fov = isPortrait ? 58 : 50;
+      cameraRig.shake = damp(cameraRig.shake, 0, 3.5, dt);
+    }
   } else {
     cameraRig.shake = damp(cameraRig.shake, 0, 4, dt);
   }
@@ -1441,6 +1568,12 @@ function handleKeyDown(event) {
     if (key === 'h') {
       event.preventDefault();
       openHelp();
+      return;
+    }
+    if (code === 'Space') {
+      event.preventDefault();
+      if (!event.repeat) startLunge();
+      return;
     }
     return;
   }
@@ -1503,6 +1636,28 @@ function bindEvents() {
   };
   bindStep(dom.leftKey, 'left');
   bindStep(dom.rightKey, 'right');
+
+  const bindZone = (zone, dir) => {
+    if (!zone) return;
+    zone.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      tapDirection(dir);
+      zone.classList.add('is-hit');
+      window.setTimeout(() => zone.classList.remove('is-hit'), 170);
+    });
+  };
+  bindZone(dom.leftZone, 'left');
+  bindZone(dom.rightZone, 'right');
+
+  if (dom.diveBtn) {
+    dom.diveBtn.addEventListener('pointerdown', (event) => {
+      event.preventDefault();
+      startLunge();
+    });
+    dom.diveBtn.addEventListener('click', (event) => {
+      if (event.detail === 0) startLunge();
+    });
+  }
 
   window.addEventListener('keydown', handleKeyDown, { passive: false });
   document.addEventListener('visibilitychange', () => {
@@ -1581,6 +1736,8 @@ async function boot() {
       ]);
     }
     reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    touchMode = window.matchMedia('(pointer: coarse)').matches || navigator.maxTouchPoints > 0;
+    dom.body.classList.toggle('is-touch', touchMode);
     stage = createWorld(dom.stage);
     podium = createPodium();
     stage.scene.add(podium.group);

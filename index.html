@@ -133,6 +133,11 @@
       <svg class="icon" aria-hidden="true"><use href="#i-star"></use></svg>
       <span>连击</span><strong id="comboValue">0</strong>
     </div>
+    <button id="diveBtn" class="dive-btn" type="button" aria-label="冲线">
+      <svg class="icon" aria-hidden="true"><use href="#i-bolt"></use></svg>
+      <span id="diveLabel">冲线</span>
+      <kbd id="diveKey" class="dive-key">空格</kbd>
+    </button>
     <p id="stepHint" class="step-hint">左右交替按，越快越快！</p>
     <div class="step-keys">
       <button id="leftKey" class="step-key" data-dir="left" type="button" aria-label="向左迈步">
@@ -144,6 +149,15 @@
         <span class="key-name">右</span>
       </button>
     </div>
+  </div>
+
+  <div id="leftZone" class="tap-zone tap-left" aria-hidden="true">
+    <span class="tap-chevron">‹</span>
+    <span class="tap-label">轻点</span>
+  </div>
+  <div id="rightZone" class="tap-zone tap-right" aria-hidden="true">
+    <span class="tap-chevron">›</span>
+    <span class="tap-label">轻点</span>
   </div>
 
   <div id="countdown" class="countdown-screen" aria-hidden="true">
@@ -268,9 +282,11 @@
         <li class="is-warning"><span class="help-num">!</span><div><b>同一个方向不能连按</b><p>连按两次会左脚绊右脚，得等他晕乎乎地爬起来。</p></div></li>
         <li><span class="help-num">4</span><div><b>冲过 100 米终点</b><p>用最少的时间完赛，和 7 位飞人比名次，争取站上领奖台。</p></div></li>
         <li><span class="help-num">5</span><div><b>百米飞人阵容</b><p>“百米五虎”博尔特、盖伊、布雷克、鲍威尔、加特林全员到齐；苏炳添 9.83、科尔曼 9.76 也在。每次比赛从他们的真实历史成绩中随机抽取。</p></div></li>
+        <li class="is-dive"><span class="help-num">6</span><div><b>最后 10 米：冲线</b><p>按 <kbd>空格</kbd> 或点“冲线”，向前扑出约 10.5 米，速度比正常跑步快；但扑完必摔。没扑过终点就会损失时间，最好在最后 10 米再用。</p></div></li>
       </ol>
       <button id="helpStart" class="btn btn-primary btn-wide" type="button">知道啦，开跑！</button>
       <p class="help-tip"><svg class="icon" aria-hidden="true"><use href="#i-heart"></use></svg> 小提示：跟着心跳的节奏按，比乱敲更快哦。</p>
+      <p class="help-tip"><svg class="icon" aria-hidden="true"><use href="#i-bolt"></use></svg> 手机触屏：左右两侧屏幕都可以点，底部按键只是提示。</p>
       <p class="help-disclaimer">非官方粉丝作品，与运动员本人无关。</p>
     </div>
   </section>
