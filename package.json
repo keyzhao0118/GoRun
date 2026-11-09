@@ -1,0 +1,11 @@
+{
+  "name": "gorun",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A cute low-poly 3D 100m dash built with Three.js. Alternate left and right to run; press the same direction twice and you will tumble.",
+  "scripts": {
+    "start": "node scripts/serve.mjs",
+    "dev": "node scripts/serve.mjs"
+  }
+}

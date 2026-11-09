@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#f9e4d8" />
+  <meta name="color-scheme" content="light" />
+  <title>GoRun · 左右交替的可爱 3D 百米跑</title>
+  <meta name="description" content="GoRun 是一个可爱又上头的 3D 百米小游戏。交替按左右方向键，越跑越快；连按同一个方向就会摔跤。来跑一次可爱的 100 米吧！" />
+  <meta property="og:title" content="GoRun · 左右交替的可爱 3D 百米跑" />
+  <meta property="og:description" content="交替按 ← →，踩准节奏，冲向 100 米终点。可爱小兔在等你开跑！" />
+  <meta property="og:type" content="website" />
+  <meta property="og:locale" content="zh_CN" />
+  <meta property="og:site_name" content="GoRun" />
+  <meta property="og:url" content="https://keyzhao0118.github.io/GoRun/" />
+  <meta property="og:image" content="https://keyzhao0118.github.io/GoRun/assets/og-cover.png" />
+  <meta property="og:image:type" content="image/png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="GoRun：可爱小兔站在粉色跑道上，准备开始 100 米冲刺" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="GoRun · 左右交替的可爱 3D 百米跑" />
+  <meta name="twitter:description" content="交替按 ← →，踩准节奏，冲向 100 米终点。" />
+  <meta name="twitter:image" content="https://keyzhao0118.github.io/GoRun/assets/og-cover.png" />
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="./assets/apple-touch-icon.png" />
+  <link rel="canonical" href="https://keyzhao0118.github.io/GoRun/" />
+  <link rel="preload" href="./assets/fonts/Fredoka-latin.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body data-mode="loading">
+  <svg class="svg-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-play" viewBox="0 0 24 24"><path d="M8.1 5.2c0-1 1.1-1.6 1.9-1.1l9.4 6.8c.7.5.7 1.6 0 2.1l-9.4 6.8c-.8.6-1.9 0-1.9-1.1V5.2Z"/></symbol>
+    <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4.5" width="4.2" height="15" rx="2.1"/><rect x="13.8" y="4.5" width="4.2" height="15" rx="2.1"/></symbol>
+    <symbol id="i-restart" viewBox="0 0 24 24"><path d="M12 4a8 8 0 1 1-7.6 10.5 1.4 1.4 0 0 1 2.7-.7A5.2 5.2 0 1 0 12 6.8c-1.5 0-2.9.6-4 1.7h2.1a1.3 1.3 0 1 1 0 2.6H5.3A1.3 1.3 0 0 1 4 9.8V5a1.3 1.3 0 1 1 2.6 0v1.4A8 8 0 0 1 12 4Z"/></symbol>
+    <symbol id="i-home" viewBox="0 0 24 24"><path d="M11 3.2a1.5 1.5 0 0 1 2 0l7.3 6.5a1.4 1.4 0 0 1-1.9 2.1l-.5-.5v7.3A2.4 2.4 0 0 1 15.5 21h-2.1v-4.8a1.4 1.4 0 0 0-2.8 0V21h-2.1a2.4 2.4 0 0 1-2.4-2.4v-7.3l-.5.5a1.4 1.4 0 1 1-1.9-2.1L11 3.2Z"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><path d="M9.1 2.8h7.3A2.7 2.7 0 0 1 19 5.5v7.3a2.7 2.7 0 0 1-2.6 2.7h-7.3a2.7 2.7 0 0 1-2.7-2.7V5.5a2.7 2.7 0 0 1 2.7-2.7Zm0 2.5c-.2 0-.3.1-.3.2v7.3c0 .1.1.2.3.2h7.3c.1 0 .2-.1.2-.2V5.5c0-.1-.1-.2-.2-.2H9.1Z"/><path d="M4.8 7.6a1.3 1.3 0 0 1 2.5.2v8.3c0 .1.1.2.3.2h8.2a1.3 1.3 0 0 1 0 2.5H7.6a2.7 2.7 0 0 1-2.8-2.7V7.6Z"/></symbol>
+    <symbol id="i-sound" viewBox="0 0 24 24"><path d="M10.3 3.6a1.3 1.3 0 0 1 2.2 1v14.8a1.3 1.3 0 0 1-2.2 1l-4.2-4H3.9A1.9 1.9 0 0 1 2 14.6v-5.2a1.9 1.9 0 0 1 1.9-1.9h2.2l4.2-3.9Z"/><path d="M17 8.2a1.3 1.3 0 0 1 1.8.2 5.7 5.7 0 0 1 0 7.2 1.3 1.3 0 1 1-2-1.6 3.1 3.1 0 0 0 0-4 1.3 1.3 0 0 1 .2-1.8Z"/><path d="M19.8 4.7a1.3 1.3 0 0 1 1.8.1 10.1 10.1 0 0 1 0 14.4 1.3 1.3 0 0 1-1.9-1.8 7.5 7.5 0 0 0 0-10.8 1.3 1.3 0 0 1 .1-1.9Z"/></symbol>
+    <symbol id="i-muted" viewBox="0 0 24 24"><path d="M10.3 3.6a1.3 1.3 0 0 1 2.2 1v14.8a1.3 1.3 0 0 1-2.2 1l-4.2-4H3.9A1.9 1.9 0 0 1 2 14.6v-5.2a1.9 1.9 0 0 1 1.9-1.9h2.2l4.2-3.9Z"/><path d="M16.6 9.6a1.3 1.3 0 0 1 1.9 0l1.5 1.5 1.5-1.5a1.3 1.3 0 1 1 1.9 1.9l-1.5 1.5 1.5 1.5a1.3 1.3 0 1 1-1.9 1.9l-1.5-1.5-1.5 1.5a1.3 1.3 0 1 1-1.9-1.9l1.5-1.5-1.5-1.5a1.3 1.3 0 0 1 0-1.9Z"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><path d="M12 2.2a9.8 9.8 0 1 1 0 19.6 9.8 9.8 0 0 1 0-19.6Zm0 2.5a7.3 7.3 0 1 0 0 14.6 7.3 7.3 0 0 0 0-14.6Z"/><path d="M12 16.9a1.2 1.2 0 1 1 0 2.4 1.2 1.2 0 0 1 0-2.4Zm.1-10.3c2.4 0 4 1.4 4 3.3 0 1.4-.7 2.3-2.1 3.2-.8.5-1 .9-1 1.6v.3a1.15 1.15 0 0 1-2.3 0v-.4c0-1.5.6-2.3 2-3.2.9-.6 1.2-1 1.2-1.5 0-.8-.7-1.2-1.8-1.2-1.1 0-1.8.5-2.2 1.4a1.2 1.2 0 0 1-2.1-1c.7-1.7 2.2-2.5 4.3-2.5Z"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M5.3 5.3a1.4 1.4 0 0 1 2 0L12 10l4.7-4.7a1.4 1.4 0 0 1 2 2L14 12l4.7 4.7a1.4 1.4 0 0 1-2 2L12 14l-4.7 4.7a1.4 1.4 0 0 1-2-2L10 12 5.3 7.3a1.4 1.4 0 0 1 0-2Z"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 1.9c.5 0 .9.3 1.1.7l2.6 5.4 5.9.8c1.1.1 1.5 1.5.7 2.2l-4.3 4.2 1 5.9c.2 1.1-1 1.9-1.9 1.3L12 19.6l-5.1 2.8c-.9.5-2.1-.2-1.9-1.3l1-5.9-4.3-4.2c-.8-.7-.4-2.1.7-2.2l5.9-.8L10.9 2.6c.2-.4.6-.7 1.1-.7Z"/></symbol>
+    <symbol id="i-trophy" viewBox="0 0 24 24"><path d="M6.4 2.5h11.2c.7 0 1.2.6 1.2 1.2v2.8c1.9.5 3.2 2.1 3.2 4.1 0 2.4-1.7 4.4-4 4.9a7.5 7.5 0 0 1-4.3 3.4v1.3h2.7a1.25 1.25 0 0 1 0 2.5H7.6a1.25 1.25 0 0 1 0-2.5h2.7v-1.3a7.5 7.5 0 0 1-4.3-3.4c-2.3-.5-4-2.5-4-4.9 0-2 1.3-3.6 3.2-4.1V3.7c0-.7.5-1.2 1.2-1.2Zm-.8 6.2c-1 .4-1.7 1.3-1.7 2.4 0 1.2.8 2.2 1.9 2.5a7.6 7.6 0 0 1-.2-1.7V8.7Zm13.1-.5v2.6c0 .6 0 1.1-.1 1.6 1.1-.3 1.9-1.3 1.9-2.5 0-1.1-.7-2-1.8-2.4Z"/></symbol>
+    <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13.7 2.2c.7-.9 2.1-.4 2.1.8v5.4h3c1 0 1.6 1.2 1 2l-7.4 11.4c-.6 1-2.1.5-2.1-.7v-5.4h-3c-1 0-1.6-1.2-1-2l7.4-11.5Z"/></symbol>
+    <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5.1 2.5c.7 0 1.3.6 1.3 1.3v.6c1.5-.6 3-.9 4.7-.4 2 .7 3.9.7 6.1-.1.8-.3 1.7.3 1.7 1.2v7.2c0 .5-.3 1-.8 1.2-2.5 1-5 1-7.5.2-1.3-.4-2.6-.3-4 .2v5.6a1.3 1.3 0 0 1-2.6 0V3.8c0-.7.6-1.3 1.3-1.3Z"/></symbol>
+    <symbol id="i-arrow-left" viewBox="0 0 24 24"><path d="M10.8 3.3a1.6 1.6 0 0 1 2.3 2.3L9.6 9h9.1a1.6 1.6 0 0 1 0 3.2H9.6l3.5 3.4a1.6 1.6 0 1 1-2.3 2.3l-6.2-6.1a1.6 1.6 0 0 1 0-2.3l6.2-6.2Z"/></symbol>
+    <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M13.2 3.3a1.6 1.6 0 0 1 2.3 0l6.2 6.2a1.6 1.6 0 0 1 0 2.3l-6.2 6.1a1.6 1.6 0 1 1-2.3-2.3l3.5-3.4H5.4a1.6 1.6 0 0 1 0-3.2h11.3l-3.5-3.4a1.6 1.6 0 0 1 0-2.3Z"/></symbol>
+    <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 21s-8.6-5-8.6-11.1A5.1 5.1 0 0 1 12 6.8a5.1 5.1 0 0 1 8.6 3.1C20.6 16 12 21 12 21Z"/></symbol>
+    <symbol id="i-keyboard" viewBox="0 0 24 24"><path d="M3.2 5.5h17.6c.9 0 1.7.8 1.7 1.7v9.6c0 .9-.8 1.7-1.7 1.7H3.2c-.9 0-1.7-.8-1.7-1.7V7.2c0-.9.8-1.7 1.7-1.7Zm1.2 3v2h2v-2h-2Zm3.5 0v2h2v-2h-2Zm3.5 0v2h2v-2h-2Zm3.5 0v2h2v-2h-2Zm3.5 0v2h2v-2h-2ZM4.4 11.2v2h2v-2h-2Zm3.5 0v2h2v-2h-2Zm3.5 0v2h2v-2h-2Zm3.5 0v2h2v-2h-2Zm3.5 0v2h2v-2h-2ZM6.3 15.3v1.4h11.4v-1.4H6.3Z"/></symbol>
+  </svg>
+
+  <div id="stage" class="stage" aria-hidden="true"></div>
+  <div class="sky-wash" aria-hidden="true"></div>
+  <div class="paper-grain" aria-hidden="true"></div>
+  <div class="speed-vignette" aria-hidden="true"></div>
+  <div id="flash" class="flash" aria-hidden="true"></div>
+
+  <div id="loader" class="loader" role="status" aria-live="polite">
+    <div class="loader-glow"></div>
+    <div class="loader-bunny">
+      <svg viewBox="0 0 48 48" aria-hidden="true">
+        <ellipse cx="15" cy="12" rx="5.3" ry="11" transform="rotate(-13 15 12)" fill="#fff7ed"/>
+        <ellipse cx="33" cy="12" rx="5.3" ry="11" transform="rotate(13 33 12)" fill="#fff7ed"/>
+        <ellipse cx="15.2" cy="12" rx="2.2" ry="6.6" transform="rotate(-13 15.2 12)" fill="#ffc4cf"/>
+        <ellipse cx="32.8" cy="12" rx="2.2" ry="6.6" transform="rotate(13 32.8 12)" fill="#ffc4cf"/>
+        <circle cx="24" cy="28" r="15.5" fill="#fff7ed"/>
+        <ellipse cx="18.5" cy="27" rx="1.9" ry="2.4" fill="#4b3942"/>
+        <ellipse cx="29.5" cy="27" rx="1.9" ry="2.4" fill="#4b3942"/>
+        <circle cx="19.2" cy="26.2" r=".65" fill="#fff"/>
+        <circle cx="30.2" cy="26.2" r=".65" fill="#fff"/>
+        <ellipse cx="14.5" cy="32" rx="2.8" ry="1.7" fill="#ffb2c0"/>
+        <ellipse cx="33.5" cy="32" rx="2.8" ry="1.7" fill="#ffb2c0"/>
+        <path d="M21.6 31.3c.9 1.2 1.5 1.2 2.4 0 .9 1.2 1.5 1.2 2.4 0" fill="none" stroke="#4b3942" stroke-width="1.3" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <p class="loader-title">GoRun</p>
+    <p class="loader-copy">正在系紧鞋带…</p>
+    <div class="loader-dots" aria-hidden="true"><i></i><i></i><i></i></div>
+  </div>
+
+  <noscript>
+    <div class="fatal">GoRun 需要 JavaScript 才能起跑。请在浏览器设置中开启 JavaScript 后再来。</div>
+  </noscript>
+
+  <header class="topbar">
+    <div class="brand" aria-label="GoRun">
+      <span class="brand-mark">
+        <svg viewBox="0 0 48 48" aria-hidden="true">
+          <circle cx="24" cy="24" r="23" fill="#ff7587"/>
+          <ellipse cx="16" cy="13" rx="4.1" ry="8.7" transform="rotate(-14 16 13)" fill="#fff7ed"/>
+          <ellipse cx="32" cy="13" rx="4.1" ry="8.7" transform="rotate(14 32 13)" fill="#fff7ed"/>
+          <ellipse cx="16.2" cy="13" rx="1.6" ry="5" transform="rotate(-14 16.2 13)" fill="#ffbcc8"/>
+          <ellipse cx="31.8" cy="13" rx="1.6" ry="5" transform="rotate(14 31.8 13)" fill="#ffbcc8"/>
+          <circle cx="24" cy="28" r="12.2" fill="#fff7ed"/>
+          <ellipse cx="19.5" cy="27.2" rx="1.45" ry="1.9" fill="#4b3942"/>
+          <ellipse cx="28.5" cy="27.2" rx="1.45" ry="1.9" fill="#4b3942"/>
+          <ellipse cx="16.5" cy="31" rx="2" ry="1.2" fill="#ffb2c0"/>
+          <ellipse cx="31.5" cy="31" rx="2" ry="1.2" fill="#ffb2c0"/>
+          <path d="M22.2 30.7c.6.8 1 .8 1.8 0 .8.8 1.2.8 1.8 0" fill="none" stroke="#4b3942" stroke-width="1" stroke-linecap="round"/>
+        </svg>
+      </span>
+      <span class="brand-name">GoRun</span>
+      <span class="brand-chip">100m</span>
+    </div>
+    <div class="top-actions">
+      <button id="pauseBtn" class="icon-btn" type="button" aria-label="暂停比赛" title="暂停 (P)" hidden>
+        <svg class="icon" aria-hidden="true"><use href="#i-pause"></use></svg>
+      </button>
+      <button id="helpBtn" class="icon-btn" type="button" aria-label="查看玩法" title="怎么玩">
+        <svg class="icon" aria-hidden="true"><use href="#i-help"></use></svg>
+      </button>
+      <button id="soundBtn" class="icon-btn" type="button" aria-label="关闭声音" title="声音">
+        <svg class="icon icon-sound-on" aria-hidden="true"><use href="#i-sound"></use></svg>
+        <svg class="icon icon-sound-off" aria-hidden="true"><use href="#i-muted"></use></svg>
+      </button>
+    </div>
+  </header>
+
+  <section id="hud" class="hud" aria-label="比赛数据">
+    <div class="hud-card hud-time">
+      <span class="hud-label">时间</span>
+      <div class="hud-value"><strong id="timeValue">0.00</strong><em>s</em></div>
+    </div>
+    <div class="progress-card">
+      <div class="progress-meta">
+        <span>起点</span>
+        <span class="progress-distance"><strong id="distanceValue">0</strong> / 100m</span>
+        <span>终点</span>
+      </div>
+      <div class="progress-rail">
+        <div id="progressFill" class="progress-fill"></div>
+        <div id="progressRunner" class="progress-runner" aria-hidden="true"></div>
+        <svg class="icon progress-flag" aria-hidden="true"><use href="#i-flag"></use></svg>
+      </div>
+    </div>
+    <div class="hud-card hud-speed">
+      <span class="hud-label">速度</span>
+      <div class="hud-value"><strong id="speedValue">0</strong><em>km/h</em></div>
+      <div class="speed-meter" aria-hidden="true"><i id="speedFill"></i></div>
+    </div>
+  </section>
+
+  <div id="stepDock" class="step-dock" aria-label="迈步按键">
+    <div id="comboBadge" class="combo-badge" hidden>
+      <svg class="icon" aria-hidden="true"><use href="#i-star"></use></svg>
+      <span>连击</span><strong id="comboValue">0</strong>
+    </div>
+    <p id="stepHint" class="step-hint">左右交替按，越快越快！</p>
+    <div class="step-keys">
+      <button id="leftKey" class="step-key" data-dir="left" type="button" aria-label="向左迈步">
+        <svg class="icon key-icon" aria-hidden="true"><use href="#i-arrow-left"></use></svg>
+        <span class="key-name">左</span>
+      </button>
+      <button id="rightKey" class="step-key" data-dir="right" type="button" aria-label="向右迈步">
+        <svg class="icon key-icon" aria-hidden="true"><use href="#i-arrow-right"></use></svg>
+        <span class="key-name">右</span>
+      </button>
+    </div>
+  </div>
+
+  <div id="countdown" class="countdown-screen" aria-hidden="true">
+    <div class="countdown-halo" aria-hidden="true"></div>
+    <div class="countdown-inner">
+      <p id="countdownKicker" class="countdown-kicker">READY?</p>
+      <div id="countdownNumber" class="countdown-number">3</div>
+      <p id="countdownSub" class="countdown-sub">左右交替 · 越快越快</p>
+    </div>
+  </div>
+
+  <div id="finishBanner" class="finish-banner" aria-hidden="true">
+    <span>FINISH!</span>
+    <small>100 M</small>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="srLive" class="sr-only" aria-live="polite"></div>
+
+  <section id="menu" class="screen menu-screen is-open" aria-labelledby="gameTitle">
+    <div class="menu-panel">
+      <p class="eyebrow menu-eyebrow">
+        <span class="eyebrow-mark"><svg class="icon" aria-hidden="true"><use href="#i-star"></use></svg></span>
+        A CUTE 100M DASH
+      </p>
+      <h1 id="gameTitle" class="hero-logo" aria-label="GoRun"><span>Go</span><span class="hero-accent">Run</span><span class="logo-spark" aria-hidden="true"><svg viewBox="0 0 40 40"><path d="M20 2c1.3 10.4 7.6 16.7 18 18-10.4 1.3-16.7 7.6-18 18C18.7 27.6 12.4 21.3 2 20 12.4 18.7 18.7 12.4 20 2Z" fill="#ffd479"/><circle cx="31" cy="9" r="3" fill="#fff7ed"/></svg></span></h1>
+      <p class="hero-tagline">左右交替，跑出你的可爱一百米。</p>
+      <p class="hero-copy">踩准节奏就会越跑越快；<br />要是连按同一个方向——咕咚，摔个大马趴。</p>
+      <div class="menu-actions">
+        <button id="startBtn" class="btn btn-primary btn-hero" type="button">
+          <span class="btn-play"><svg class="icon" aria-hidden="true"><use href="#i-play"></use></svg></span>
+          <span>开始奔跑</span>
+          <kbd class="btn-space">空格</kbd>
+        </button>
+        <button id="howBtn" class="btn btn-soft" type="button">怎么玩</button>
+      </div>
+      <div class="menu-meta">
+        <div class="best-pill" title="本机最佳 100 米成绩">
+          <svg class="icon" aria-hidden="true"><use href="#i-trophy"></use></svg>
+          <span>最佳</span><strong id="bestValue">--.--</strong><small>s</small>
+        </div>
+        <div class="key-pill">
+          <span class="mini-key">←</span><span class="mini-key">→</span><span>交替按</span>
+        </div>
+      </div>
+    </div>
+    <p class="menu-foot"><span>100 M</span><span class="foot-dot">·</span><span>一点点心跳</span><span class="foot-dot">·</span><span>Three.js</span></p>
+  </section>
+
+  <section id="results" class="screen results-screen" aria-labelledby="resultsTitle">
+    <div class="result-card">
+      <div class="result-head">
+        <span class="finish-tag"><svg class="icon" aria-hidden="true"><use href="#i-flag"></use></svg> FINISH</span>
+        <div id="gradeBadge" class="grade-badge" data-grade="S">
+          <strong id="gradeLetter">S</strong>
+          <span id="gradeLabel">闪电兔</span>
+        </div>
+      </div>
+      <h2 id="resultsTitle">漂亮的一跑！</h2>
+      <p id="resultSummary" class="result-summary">小短腿倒腾得飞快。</p>
+      <div class="result-time-wrap">
+        <div class="result-time"><strong id="resultTime">00.00</strong><span>秒</span></div>
+        <div id="newBestBadge" class="new-best" hidden><svg class="icon" aria-hidden="true"><use href="#i-star"></use></svg>新纪录！</div>
+      </div>
+      <div class="result-stats">
+        <div class="result-stat"><span>最佳成绩</span><strong id="bestResult">--.--s</strong></div>
+        <div class="result-stat"><span>摔倒次数</span><strong id="fallResult">0</strong></div>
+        <div class="result-stat"><span>最高连击</span><strong id="comboResult">0</strong></div>
+        <div class="result-stat"><span>最高速度</span><strong id="maxSpeedResult">0<small>km/h</small></strong></div>
+      </div>
+      <div class="result-actions">
+        <button id="restartBtn" class="btn btn-primary" type="button">
+          <svg class="icon" aria-hidden="true"><use href="#i-restart"></use></svg>再跑一次
+        </button>
+        <button id="copyBtn" class="btn btn-soft" type="button">
+          <svg class="icon" aria-hidden="true"><use href="#i-copy"></use></svg>复制成绩
+        </button>
+      </div>
+      <button id="homeBtn" class="link-btn" type="button"><svg class="icon" aria-hidden="true"><use href="#i-home"></use></svg>回到标题页</button>
+    </div>
+  </section>
+
+  <section id="pause" class="screen pause-screen" role="dialog" aria-modal="true" aria-labelledby="pauseTitle">
+    <div class="pause-card card">
+      <div class="pause-badge"><svg class="icon" aria-hidden="true"><use href="#i-pause"></use></svg></div>
+      <p class="eyebrow">TAKE A BREATH</p>
+      <h2 id="pauseTitle">先喘口气～</h2>
+      <p class="pause-copy">计时已经暂停，鞋带还系得很紧。</p>
+      <div class="pause-actions">
+        <button id="resumeBtn" class="btn btn-primary" type="button"><svg class="icon" aria-hidden="true"><use href="#i-play"></use></svg>继续奔跑</button>
+        <button id="pauseHomeBtn" class="btn btn-soft" type="button"><svg class="icon" aria-hidden="true"><use href="#i-home"></use></svg>回到标题</button>
+      </div>
+      <p class="pause-hint">按 <kbd>P</kbd> 也可以继续</p>
+    </div>
+  </section>
+
+  <section id="help" class="screen modal-screen" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+    <div class="modal-card help-card">
+      <button id="helpClose" class="icon-btn modal-close" type="button" aria-label="关闭玩法说明">
+        <svg class="icon" aria-hidden="true"><use href="#i-close"></use></svg>
+      </button>
+      <p class="eyebrow">HOW TO PLAY</p>
+      <h2 id="helpTitle">怎么玩 GoRun</h2>
+      <div class="help-demo" aria-hidden="true">
+        <span class="demo-key">←</span>
+        <span class="demo-key">→</span>
+        <span class="demo-light">一左一右，跑起来！</span>
+      </div>
+      <ol class="help-list">
+        <li><span class="help-num">1</span><div><b>左右交替按</b><p>轮流按下 <kbd>←</kbd> 和 <kbd>→</kbd>，GoRun 就会迈开小短腿。</p></div></li>
+        <li><span class="help-num">2</span><div><b>越快，越猛</b><p>交替得越快，速度就越高。保持节奏，别停太久。</p></div></li>
+        <li class="is-warning"><span class="help-num">!</span><div><b>同一个方向不能连按</b><p>连按两次会左脚绊右脚，得等它晕乎乎地爬起来。</p></div></li>
+        <li><span class="help-num">4</span><div><b>冲过 100 米终点</b><p>用最少的时间完赛，刷新你的最佳纪录。</p></div></li>
+      </ol>
+      <button id="helpStart" class="btn btn-primary btn-wide" type="button">知道啦，开跑！</button>
+      <p class="help-tip"><svg class="icon" aria-hidden="true"><use href="#i-heart"></use></svg> 小提示：跟着心跳的节奏按，比乱敲更快哦。</p>
+    </div>
+  </section>
+
+  <div id="error" class="fatal-wrap" hidden>
+    <div class="fatal">
+      <h1>没跑起来…</h1>
+      <p>这个浏览器好像暂时跑不动 3D。请换用最新版 Chrome、Edge 或 Safari，再试一次。</p>
+      <button class="btn btn-primary" type="button" onclick="location.reload()">重新加载</button>
+    </div>
+  </div>
+
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three.module.js" } }
+  </script>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
