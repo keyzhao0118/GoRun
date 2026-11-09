@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="./assets/og-cover.png" alt="GoRun — 和百米飞人跑一场可爱的一百米" width="760" />
+<img src="./assets/og-cover.png?v=2" alt="GoRun — 和百米飞人跑一场可爱的一百米" width="760" />
 
 # GoRun
 
@@ -22,7 +22,7 @@ GoRun 是一个固定 **100 米** 的 3D 短跑小游戏。你是粉色跑道上
 - 比赛结束后按名次展示完整成绩榜，看看你排第几
 - 固定 100 米、8 条道次、低机位 3D 体育场、彩带和观众
 
-![八位选手在起跑线列队](assets/screenshot-lineup.jpg)
+![八位选手在起跑线列队](assets/screenshot-lineup.jpg?v=2)
 
 ## 七位飞人对手
 
@@ -72,7 +72,7 @@ GoRun 是一个固定 **100 米** 的 3D 短跑小游戏。你是粉色跑道上
 - **原创程序化资产**：角色、跑道、看台、观众、地贴、广告牌、彩带、UI 图形和音效均由代码生成，没有下载模型、贴图或官方素材。
 - **移动端适配**：底部大按键、竖屏菜单、横屏双栏结算、安全区适配。
 
-![](./assets/screenshot-run.jpg)
+![](./assets/screenshot-run.jpg?v=2)
 
 ## 本地运行
 
@@ -116,12 +116,12 @@ python -m http.server 4173
 ## 截图
 
 <div align="center">
-  <img src="./assets/screenshot-menu.jpg" alt="GoRun 标题界面" width="48%" />
-  <img src="./assets/screenshot-results.jpg" alt="GoRun 名次结算界面" width="48%" />
+  <img src="./assets/screenshot-menu.jpg?v=2" alt="GoRun 标题界面" width="48%" />
+  <img src="./assets/screenshot-results.jpg?v=2" alt="GoRun 名次结算界面" width="48%" />
 </div>
 
 <div align="center">
-  <img src="./assets/screenshot-mobile.jpg" alt="GoRun 移动端界面" width="240" />
+  <img src="./assets/screenshot-mobile.jpg?v=2" alt="GoRun 移动端界面" width="240" />
 </div>
 
 ## 项目结构
